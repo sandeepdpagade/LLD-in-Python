@@ -1,6 +1,9 @@
 # LLD in Python — Revision Notes
 
-Personal revision notes for Low-Level Design (LLD) interview preparation, focused on Python. Built as a small static site so the notes are easy to read, search, and deploy (GitHub Pages, Netlify, Vercel, or any static host) rather than living as scattered Markdown files.
+Personal revision notes for Low-Level Design (LLD) interview preparation, focused on Python. Built as a small static site so the notes are easy to read, search, and deploy rather than living as scattered Markdown files.
+
+🔗 **Live site:** [sandeepdpagade.github.io/LLD-in-Python](https://sandeepdpagade.github.io/LLD-in-Python/)
+📦 **Repo:** [github.com/sandeepdpagade/LLD-in-Python](https://github.com/sandeepdpagade/LLD-in-Python)
 
 ## Structure
 
@@ -10,6 +13,7 @@ css/style.css                  Shared styling (light/dark theme, layout, code bl
 js/main.js                     Sidebar nav, auto-generated "on this page" TOC, theme toggle, copy buttons
 topics/
   oops-in-python.html          OOP in Python
+  solid-principles.html        SOLID principles (each with a violation + fixed example)
   uml-basics.html              UML basics (class diagrams, relationships, sequence diagrams)
 ```
 
@@ -24,10 +28,10 @@ Each topic is a standalone HTML page sharing the same header/sidebar/theme via `
 ## Topics covered so far
 
 - **OOP in Python** — classes/objects, encapsulation, inheritance, polymorphism, abstraction, dunder methods, composition vs inheritance.
+- **SOLID Principles** — SRP, OCP, LSP, ISP, DIP, each with a violating example and a fixed example.
 - **UML Basics** — class diagram notation, relationship types (association, aggregation, composition, inheritance, realization, dependency), multiplicity, sequence diagrams.
 
 ## Planned
 
-- SOLID Principles
 - Creational / Structural / Behavioral Design Patterns
 - LLD practice problems (Parking Lot, Elevator, Splitwise, BookMyShow, etc.)

@@ -137,6 +137,22 @@ code, pre, kbd {
 }
 .theme-toggle:hover { border-color: var(--accent); }
 
+.github-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.github-link:hover { border-color: var(--accent); text-decoration: none; color: var(--text); }
+.github-link svg { width: 16px; height: 16px; fill: currentColor; flex-shrink: 0; }
+@media (max-width: 480px) { .github-link .github-label { display: none; } }
+
 /* ===================== Layout ===================== */
 .layout {
   display: grid;
