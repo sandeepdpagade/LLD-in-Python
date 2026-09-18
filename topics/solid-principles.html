@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SOLID Principles — LLD Revision Notes</title>
+<link rel="stylesheet" href="../css/style.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+<style>
+  .verdict-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.2rem 0.65rem;
+    border-radius: 20px;
+    margin-bottom: 0.5rem;
+  }
+  .verdict-bad { background: rgba(247, 118, 142, 0.12); color: var(--red); }
+  .verdict-good { background: rgba(158, 206, 106, 0.12); color: var(--green); }
+  .principle-letter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 800;
+    font-size: 1.3rem;
+    margin-right: 0.6rem;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body data-page="solid" data-root="../">
+
+<header class="topbar">
+  <button id="menu-toggle" class="menu-toggle" aria-label="Toggle menu">☰</button>
+  <div class="brand"><a href="../index.html" style="color:inherit;display:flex;align-items:center;gap:0.5rem;"><span class="logo">LLD</span> LLD in Python</a></div>
+  <div class="controls">
+    <button id="theme-toggle" class="theme-toggle">🌙 Dark</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <nav id="sidebar-nav"></nav>
+  </aside>
+
+  <main class="content">
+    <h1>SOLID Principles</h1>
+    <p class="subtitle">The five design principles interviewers use to judge whether your LLD is actually good — each with a violation and a fix.</p>
+
+    <div class="lead-badges">
+      <span class="pill">🏛 Fundamentals</span>
+      <span class="pill">⏱ ~25 min read</span>
+      <span class="pill">🎯 The #1 evaluation rubric in LLD rounds</span>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-title">💡 Why this matters</div>
+      <p>SOLID isn't a topic you get asked to "define" — it's the lens interviewers use to critique <em>everything</em> you design. When they ask "what happens if we add a new payment type?" or "what if two classes need slightly different behavior?", they're really asking "did you follow OCP / LSP here?" Knowing the fix cold, not just the name, is what separates a pass from a borderline reject.</p>
+    </div>
+
+    <h2 id="overview">Overview</h2>
+    <table>
+      <tr><th>Letter</th><th>Principle</th><th>One-line rule</th></tr>
+      <tr><td><strong>S</strong></td><td>Single Responsibility</td><td>A class should have only one reason to change</td></tr>
+      <tr><td><strong>O</strong></td><td>Open/Closed</td><td>Open for extension, closed for modification</td></tr>
+      <tr><td><strong>L</strong></td><td>Liskov Substitution</td><td>Subtypes must be usable wherever the base type is expected</td></tr>
+      <tr><td><strong>I</strong></td><td>Interface Segregation</td><td>Don't force a class to depend on methods it doesn't use</td></tr>
+      <tr><td><strong>D</strong></td><td>Dependency Inversion</td><td>Depend on abstractions, not concrete implementations</td></tr>
+    </table>
+
+    <h2 id="srp"><span class="principle-letter">S</span>Single Responsibility Principle (SRP)</h2>
+    <p><strong>"A class should have only one reason to change."</strong> Each class should own exactly one piece of responsibility/business logic. If you find yourself describing a class with "and" ("this class calculates the invoice <em>and</em> saves it <em>and</em> prints it"), it's doing too much.</p>
+
+    <span class="verdict-tag verdict-bad">❌ Violation</span>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Invoice:
+    def __init__(self, items):
+        self.items = items
+
+    def calculate_total(self):
+        return sum(item["price"] for item in self.items)
+
+    def save_to_database(self):           # persistence logic
+        print("Saving invoice to database...")
+
+    def print_invoice(self):              # presentation logic
+        total = self.calculate_total()
+        print(f"Invoice total: ${total}")
+
+# Invoice now has 3 reasons to change: a pricing rule changes,
+# the database changes, OR the print format changes.</code></pre>
+    </div>
+
+    <span class="verdict-tag verdict-good">✅ Fix</span>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Invoice:                            # only owns invoice data + pricing
+    def __init__(self, items):
+        self.items = items
+
+    def calculate_total(self):
+        return sum(item["price"] for item in self.items)
+
+class InvoiceRepository:                  # only owns persistence
+    def save(self, invoice: Invoice):
+        print("Saving invoice to database...")
+
+class InvoicePrinter:                     # only owns presentation
+    def print(self, invoice: Invoice):
+        print(f"Invoice total: ${invoice.calculate_total()}")
+
+invoice = Invoice(items=[{"price": 100}, {"price": 250}])
+InvoiceRepository().save(invoice)
+InvoicePrinter().print(invoice)</code></pre>
+    </div>
+
+    <div class="callout interview">
+      <div class="callout-title">🎤 How to spot SRP violations in an interview</div>
+      <p>Ask yourself: "who are the different <em>actors/stakeholders</em> that could request a change to this class?" If the DBA wants to change how data is stored, the finance team wants to change how totals are calculated, and the design team wants to change print formatting — that's 3 actors, 3 responsibilities, 3 classes.</p>
+    </div>
+
+    <h2 id="ocp"><span class="principle-letter">O</span>Open/Closed Principle (OCP)</h2>
+    <p><strong>"Software entities should be open for extension, but closed for modification."</strong> You should be able to add new behavior without editing existing, already-tested code — typically achieved via abstraction + polymorphism instead of conditional branching.</p>
+
+    <span class="verdict-tag verdict-bad">❌ Violation</span>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class DiscountCalculator:
+    def calculate(self, customer_type, amount):
+        if customer_type == "regular":
+            return amount
+        elif customer_type == "premium":
+            return amount * 0.9
+        elif customer_type == "vip":
+            return amount * 0.8
+        # Adding a new customer type means editing this method again
+        # and risking breaking the existing, already-tested branches.</code></pre>
+    </div>
+
+    <span class="verdict-tag verdict-good">✅ Fix</span>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class DiscountStrategy(ABC):
+    @abstractmethod
+    def apply(self, amount: float) -> float:
+        pass
+
+class RegularDiscount(DiscountStrategy):
+    def apply(self, amount): return amount
+
+class PremiumDiscount(DiscountStrategy):
+    def apply(self, amount): return amount * 0.9
+
+class VipDiscount(DiscountStrategy):
+    def apply(self, amount): return amount * 0.8
+
+# New requirement -> add a NEW class, touch NOTHING else:
+class StudentDiscount(DiscountStrategy):
+    def apply(self, amount): return amount * 0.85
+
+def checkout(amount: float, strategy: DiscountStrategy):
+    return strategy.apply(amount)
+
+print(checkout(1000, VipDiscount()))       # 800.0
+print(checkout(1000, StudentDiscount()))   # 850.0 -> zero changes to checkout()</code></pre>
+    </div>
+
+    <div class="callout interview">
+      <div class="callout-title">🎤 Interview one-liner</div>
+      <p>OCP is basically "replace <code>if/elif</code> chains on a type with polymorphism." This is the exact mechanism behind the <strong>Strategy</strong> and <strong>Factory</strong> design patterns — expect to apply it whenever an interviewer says "how would this handle a new type of X in the future?"</p>
+    </div>
+
+    <h2 id="lsp"><span class="principle-letter">L</span>Liskov Substitution Principle (LSP)</h2>
+    <p><strong>"Objects of a superclass should be replaceable with objects of a subclass without breaking the program."</strong> If code works correctly with a base class, it must keep working correctly when any subclass is swapped in — a subclass shouldn't weaken guarantees or produce surprising behavior.</p>
+
+    <span class="verdict-tag verdict-bad">❌ Violation — the classic Rectangle/Square trap</span>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Rectangle:
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+
+    def set_width(self, w): self.width = w
+    def set_height(self, h): self.height = h
+    def area(self): return self.width * self.height
+
+class Square(Rectangle):                 # "a square IS-A rectangle", right?
+    def set_width(self, w):
+        self.width = w
+        self.height = w                  # forced to keep both sides equal
+    def set_height(self, h):
+        self.width = h
+        self.height = h
+
+def resize_and_check(rect: Rectangle):
+    rect.set_width(5)
+    rect.set_height(4)
+    assert rect.area() == 20, "Broken!"  # true for Rectangle, but...
+
+resize_and_check(Rectangle(2, 3))   # OK, area = 20
+resize_and_check(Square(2, 2))      # AssertionError! area = 16
+# Square silently changed set_height's contract -> substitution breaks the caller.</code></pre>
+    </div>
+
+    <span class="verdict-tag verdict-good">✅ Fix — don't force an is-a where behavior actually differs</span>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class Shape(ABC):
+    @abstractmethod
+    def area(self) -> float:
+        pass
+
+class Rectangle(Shape):
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+    def area(self):
+        return self.width * self.height
+
+class Square(Shape):                      # sibling, NOT a subclass of Rectangle
+    def __init__(self, side):
+        self.side = side
+    def area(self):
+        return self.side ** 2
+
+def print_area(shape: Shape):
+    print(shape.area())
+
+print_area(Rectangle(5, 4))   # 20 -> any Shape works safely, no surprises
+print_area(Square(4))         # 16</code></pre>
+    </div>
+
+    <span class="verdict-tag verdict-bad">❌ Another classic violation — the flightless bird trap</span>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Bird:
+    def fly(self):
+        return "Flying high!"
+
+class Ostrich(Bird):              # an ostrich IS-A bird, but...
+    def fly(self):
+        raise Exception("Ostriches can't fly!")   # breaks the parent's contract
+
+def make_it_fly(bird: Bird):
+    print(bird.fly())
+
+for b in [Bird(), Ostrich()]:
+    make_it_fly(b)                # crashes on Ostrich -> not substitutable</code></pre>
+    </div>
+
+    <span class="verdict-tag verdict-good">✅ Fix — separate "can fly" from "is a bird"</span>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class Bird(ABC):
+    @abstractmethod
+    def move(self): pass
+
+class FlyingBird(Bird):
+    def move(self): return "Flying high!"
+
+class Ostrich(Bird):              # no longer promises to fly
+    def move(self): return "Running fast!"
+
+def make_it_move(bird: Bird):
+    print(bird.move())            # every Bird can be substituted safely
+
+for b in [FlyingBird(), Ostrich()]:
+    make_it_move(b)</code></pre>
+    </div>
+
+    <div class="callout pitfall">
+      <div class="callout-title">🚨 The takeaway, generalized</div>
+      <p>LSP violations usually hide behind an innocent-sounding "is-a": a <code>Square</code> mathematically is a rectangle, and an <code>Ostrich</code> biologically is a bird — but neither behaves like the base type once you add a method (<code>set_width</code>, <code>fly</code>) that not every subtype can honor. Whenever a subclass overrides a method to <strong>narrow preconditions</strong>, <strong>weaken postconditions</strong>, or <strong>throw on inputs the parent accepted</strong>, that's an LSP smell. Prefer modeling shared behavior via a common interface instead of forcing inheritance.</p>
+    </div>
+
+    <h2 id="isp"><span class="principle-letter">I</span>Interface Segregation Principle (ISP)</h2>
+    <p><strong>"Clients should not be forced to depend on methods they do not use."</strong> Prefer several small, focused interfaces over one large, general-purpose one.</p>
+
+    <span class="verdict-tag verdict-bad">❌ Violation</span>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class Worker(ABC):
+    @abstractmethod
+    def work(self): pass
+
+    @abstractmethod
+    def eat(self): pass
+
+class HumanWorker(Worker):
+    def work(self): print("Coding...")
+    def eat(self): print("Eating lunch...")
+
+class RobotWorker(Worker):
+    def work(self): print("Welding...")
+    def eat(self):
+        raise NotImplementedError("Robots don't eat!")
+        # Forced to implement a method that makes no sense for this class.</code></pre>
+    </div>
+
+    <span class="verdict-tag verdict-good">✅ Fix</span>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class Workable(ABC):
+    @abstractmethod
+    def work(self): pass
+
+class Eatable(ABC):
+    @abstractmethod
+    def eat(self): pass
+
+class HumanWorker(Workable, Eatable):     # needs both -> implements both
+    def work(self): print("Coding...")
+    def eat(self): print("Eating lunch...")
+
+class RobotWorker(Workable):              # only needs Workable -> only implements that
+    def work(self): print("Welding...")
+
+def start_shift(worker: Workable):
+    worker.work()
+
+start_shift(HumanWorker())
+start_shift(RobotWorker())    # no forced, meaningless eat() method anywhere</code></pre>
+    </div>
+
+    <div class="callout interview">
+      <div class="callout-title">🎤 Interview one-liner</div>
+      <p>ISP is SRP applied to interfaces/abstract classes instead of concrete classes. If an ABC has methods that only <em>some</em> subclasses can meaningfully implement, split it — a "fat interface" forces classes to implement (or stub out / raise on) methods irrelevant to them.</p>
+    </div>
+
+    <h2 id="dip"><span class="principle-letter">D</span>Dependency Inversion Principle (DIP)</h2>
+    <p><strong>"High-level modules should not depend on low-level modules — both should depend on abstractions."</strong> Business logic shouldn't be wired directly to a concrete implementation detail (a specific database, email provider, payment gateway); it should depend on an interface, with the concrete class "injected" from outside.</p>
+
+    <span class="verdict-tag verdict-bad">❌ Violation</span>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class EmailSender:
+    def send(self, message):
+        print(f"Emailing: {message}")
+
+class NotificationService:                # high-level module
+    def __init__(self):
+        self.sender = EmailSender()       # hard-wired to ONE concrete class
+        # low-level module (EmailSender) directly created inside high-level module
+
+    def notify(self, message):
+        self.sender.send(message)
+
+# Switching to SMS later means editing NotificationService's source code.</code></pre>
+    </div>
+
+    <span class="verdict-tag verdict-good">✅ Fix</span>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class MessageSender(ABC):                 # the abstraction both sides depend on
+    @abstractmethod
+    def send(self, message): pass
+
+class EmailSender(MessageSender):
+    def send(self, message):
+        print(f"Emailing: {message}")
+
+class SMSSender(MessageSender):
+    def send(self, message):
+        print(f"Texting: {message}")
+
+class NotificationService:                # high-level module
+    def __init__(self, sender: MessageSender):   # depends on the abstraction
+        self.sender = sender              # injected from outside ("dependency injection")
+
+    def notify(self, message):
+        self.sender.send(message)
+
+NotificationService(EmailSender()).notify("Order shipped!")
+NotificationService(SMSSender()).notify("Order shipped!")   # swap freely, zero edits above</code></pre>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-title">💡 DIP vs Dependency Injection — not the same thing</div>
+      <p><strong>DIP</strong> is the design principle ("depend on abstractions"). <strong>Dependency Injection (DI)</strong> is one common technique for achieving it (passing the concrete implementation in via constructor/parameter, as above). You can follow DIP without a DI framework — plain constructor injection, like this example, is enough for almost every LLD interview.</p>
+    </div>
+
+    <div class="revision-box">
+      <h3>📌 Quick Revision — Cheat Sheet</h3>
+      <ul>
+        <li><strong>S</strong> — One class, one reason to change. Split by <em>actor/stakeholder</em>, not by convenience.</li>
+        <li><strong>O</strong> — Add new behavior via a new class, not by editing existing <code>if/elif</code> chains. Powers Strategy/Factory patterns.</li>
+        <li><strong>L</strong> — A subclass must honor the base class's contract fully. If overriding narrows/breaks behavior (Rectangle/Square), don't force inheritance.</li>
+        <li><strong>I</strong> — Many small, focused interfaces &gt; one fat interface. Don't make a class implement methods it can't honestly support.</li>
+        <li><strong>D</strong> — High-level business logic depends on an abstraction (ABC), not a concrete class. Inject the concrete implementation from outside.</li>
+      </ul>
+    </div>
+
+    <h2 id="interview-questions">Common Interview Questions</h2>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: Which SOLID principle is violated most often in real code?</div>
+      <p>SRP, by far — classes that quietly accumulate persistence, validation, and formatting logic alongside their core responsibility ("God classes"). It's also the easiest one to fix incrementally, which is why interviewers probe it first.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: How are OCP and the Strategy pattern related?</div>
+      <p>Strategy is a direct implementation technique for OCP: instead of branching on type inside one method, you extract each behavior into its own class behind a common interface, and the context class picks which one to use at runtime — extending behavior without modifying existing code.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: Give a real example of an LSP violation you'd catch in review.</div>
+      <p>A subclass that overrides a method to throw an exception for cases the parent handled fine (like <code>RobotWorker.eat()</code> raising in the ISP example, if it had been forced to inherit `eat()`), or one that returns a different/narrower type than callers expect. Any time substituting the subclass in existing code could break it, that's LSP.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: Does following DIP mean you always need a dependency injection framework?</div>
+      <p>No — in Python, plain constructor injection (passing the dependency as a parameter, as shown above) is enough for almost all LLD problems. Frameworks like <code>dependency-injector</code> just automate wiring for large real-world apps; interviewers care about the principle, not the tooling.</p>
+    </div>
+
+    <footer class="page-footer">SOLID Principles · LLD Revision Notes</footer>
+  </main>
+
+  <aside class="toc">
+    <div class="toc-title">On this page</div>
+    <ul id="toc-list"></ul>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>UML Basics — LLD Revision Notes</title>
+<link rel="stylesheet" href="../css/style.css" />
+<style>
+  .uml-svg { color: var(--text); display: block; }
+  .uml-svg text { font-family: "Fira Code", "JetBrains Mono", Consolas, monospace; fill: var(--text); }
+  .uml-svg .box { fill: var(--bg-card); stroke: var(--text-dim); stroke-width: 1.4; }
+  .uml-svg .band-line { stroke: var(--text-dim); stroke-width: 1; }
+  .uml-svg .title-text { font-weight: 700; }
+  .uml-svg .rel-line { stroke: var(--text); stroke-width: 1.6; fill: none; }
+  .uml-svg .rel-dashed { stroke-dasharray: 6,4; }
+  .uml-svg .mult { font-size: 10.5px; fill: var(--accent); }
+  .uml-svg .rel-label { font-size: 10.5px; fill: var(--text-dim); }
+  .mini-diagram-cell { padding: 0.4rem 0.6rem !important; }
+  .diagram-wrap {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin: 1.25rem 0 1.75rem;
+    overflow-x: auto;
+  }
+  .diagram-caption { text-align: center; font-size: 0.82rem; color: var(--text-dim); margin-top: 0.5rem; }
+</style>
+</head>
+<body data-page="uml" data-root="../">
+
+<header class="topbar">
+  <button id="menu-toggle" class="menu-toggle" aria-label="Toggle menu">☰</button>
+  <div class="brand"><a href="../index.html" style="color:inherit;display:flex;align-items:center;gap:0.5rem;"><span class="logo">LLD</span> LLD in Python</a></div>
+  <div class="controls">
+    <button id="theme-toggle" class="theme-toggle">🌙 Dark</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <nav id="sidebar-nav"></nav>
+  </aside>
+
+  <main class="content">
+    <h1>UML Basics</h1>
+    <p class="subtitle">The minimum UML you actually need for LLD interviews — class diagrams, relationships, and sequence diagrams — with worked examples.</p>
+
+    <div class="lead-badges">
+      <span class="pill">📐 Fundamentals</span>
+      <span class="pill">⏱ ~20 min read</span>
+      <span class="pill">🎯 Asked in almost every round</span>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-title">💡 Why this matters</div>
+      <p>You will rarely be asked to draw a "textbook perfect" UML diagram in an interview. But you're constantly expected to <em>talk</em> in UML terms — "Library <strong>composes</strong> Book copies", "Member <strong>is-a</strong> Person", "0..* multiplicity" — and to sketch a rough class diagram on a whiteboard/doc before writing code. This page is the 20% of UML that covers 95% of interview usage.</p>
+    </div>
+
+    <h2 id="what-is-uml">1. What is UML?</h2>
+    <p><strong>UML (Unified Modeling Language)</strong> is a standardized set of diagram types for visualizing the design of a system — its classes, their relationships, and how objects interact over time. In LLD interviews it's the shared vocabulary you use to communicate a design before (or while) writing code.</p>
+
+    <p>UML diagrams fall into two broad families:</p>
+    <table>
+      <tr><th>Family</th><th>Answers</th><th>Common diagrams</th></tr>
+      <tr><td><strong>Structural</strong></td><td>What does the system <em>look like</em>?</td><td>Class, Object, Component, Deployment</td></tr>
+      <tr><td><strong>Behavioral</strong></td><td>How does the system <em>behave/interact</em>?</td><td>Sequence, Activity, State, Use Case</td></tr>
+    </table>
+
+    <div class="callout interview">
+      <div class="callout-title">🎤 Interview reality check</div>
+      <p>Out of all UML diagrams, interviewers care almost exclusively about two: the <strong>Class Diagram</strong> (structure — your classes and how they relate) and the <strong>Sequence Diagram</strong> (behavior — how a specific use case flows across those classes). Master those two and you're covered.</p>
+    </div>
+
+    <h2 id="class-diagram-notation">2. Class Diagram Notation</h2>
+    <p>Every class is drawn as a box with up to three compartments: <strong>name</strong>, <strong>attributes</strong>, and <strong>methods</strong>.</p>
+
+    <div class="diagram-wrap">
+      <svg class="uml-svg" viewBox="0 0 320 190" width="100%" style="max-width:320px;margin:0 auto;display:block;">
+        <rect class="box" x="10" y="10" width="220" height="170"/>
+        <line class="band-line" x1="10" y1="46" x2="230" y2="46"/>
+        <line class="band-line" x1="10" y1="118" x2="230" y2="118"/>
+        <text class="title-text" x="120" y="32" text-anchor="middle" font-size="13">Book</text>
+        <text x="20" y="65" font-size="11">- title: String</text>
+        <text x="20" y="83" font-size="11">- isbn: String</text>
+        <text x="20" y="101" font-size="11"># isAvailable: bool</text>
+        <text x="20" y="137" font-size="11">+ checkOut(): void</text>
+        <text x="20" y="155" font-size="11">+ returnBook(): void</text>
+        <text x="20" y="173" font-size="11">~ notify(): void</text>
+        <text x="255" y="65" font-size="10.5" fill="var(--text-dim)">public</text>
+        <text x="255" y="83" font-size="10.5" fill="var(--text-dim)">private</text>
+        <text x="255" y="101" font-size="10.5" fill="var(--text-dim)">protected</text>
+        <text x="255" y="173" font-size="10.5" fill="var(--text-dim)">package</text>
+      </svg>
+      <p class="diagram-caption">Class box anatomy: name / attributes / methods, each attribute or method prefixed by a visibility symbol</p>
+    </div>
+
+    <table>
+      <tr><th>Symbol</th><th>Visibility</th><th>Python equivalent</th></tr>
+      <tr><td><code>+</code></td><td>Public</td><td><code>self.name</code></td></tr>
+      <tr><td><code>-</code></td><td>Private</td><td><code>self.__name</code></td></tr>
+      <tr><td><code>#</code></td><td>Protected</td><td><code>self._name</code></td></tr>
+      <tr><td><code>~</code></td><td>Package/internal</td><td>module-level convention</td></tr>
+    </table>
+
+    <ul>
+      <li>An <strong>abstract class</strong> name is written in <em>italics</em> (or tagged <code>&laquo;abstract&raquo;</code>).</li>
+      <li>An <strong>interface</strong> is tagged with the stereotype <code>&laquo;interface&raquo;</code> above the name.</li>
+      <li>A <strong>static</strong> member is <u>underlined</u>.</li>
+      <li>Method signatures follow <code>name(param: Type): ReturnType</code>.</li>
+    </ul>
+
+    <h2 id="relationships">3. Relationships Cheat Sheet</h2>
+    <p>This is the single most interview-relevant part of UML — and the part everyone mixes up. Study the notation once, carefully.</p>
+
+    <table>
+      <tr><th style="width:180px;">Notation</th><th>Relationship</th><th>Meaning</th></tr>
+      <tr>
+        <td class="mini-diagram-cell">
+          <svg class="uml-svg" viewBox="0 0 180 60" width="180" height="60">
+            <defs>
+              <marker id="arrowopen1" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M1,1 L8,4 L1,7" fill="none" stroke="var(--text)" stroke-width="1.4"/></marker>
+            </defs>
+            <rect class="box" x="5" y="20" width="45" height="20"/><text x="27.5" y="34" text-anchor="middle" font-size="10.5">A</text>
+            <rect class="box" x="130" y="20" width="45" height="20"/><text x="152.5" y="34" text-anchor="middle" font-size="10.5">B</text>
+            <line class="rel-line" x1="50" y1="30" x2="128" y2="30" marker-end="url(#arrowopen1)"/>
+          </svg>
+        </td>
+        <td><strong>Association</strong></td>
+        <td>General "uses-a" relationship. Solid line, optional open arrow for navigability. E.g. <code>Order</code> ↔ <code>Customer</code>.</td>
+      </tr>
+      <tr>
+        <td class="mini-diagram-cell">
+          <svg class="uml-svg" viewBox="0 0 180 60" width="180" height="60">
+            <defs>
+              <marker id="diahollow1" markerWidth="16" markerHeight="10" refX="14" refY="5" orient="auto"><path d="M0,5 L7,1 L14,5 L7,9 z" fill="var(--bg-card)" stroke="var(--text)" stroke-width="1.3"/></marker>
+            </defs>
+            <rect class="box" x="5" y="20" width="45" height="20"/><text x="27.5" y="34" text-anchor="middle" font-size="9.5">Whole</text>
+            <rect class="box" x="130" y="20" width="45" height="20"/><text x="152.5" y="34" text-anchor="middle" font-size="10.5">Part</text>
+            <line class="rel-line" x1="128" y1="30" x2="50" y2="30" marker-end="url(#diahollow1)"/>
+          </svg>
+        </td>
+        <td><strong>Aggregation</strong></td>
+        <td>"Has-a", <em>weak</em> ownership — the part can outlive the whole. Hollow diamond at the whole end. E.g. <code>Library</code> ◇— <code>Member</code>.</td>
+      </tr>
+      <tr>
+        <td class="mini-diagram-cell">
+          <svg class="uml-svg" viewBox="0 0 180 60" width="180" height="60">
+            <defs>
+              <marker id="diafilled1" markerWidth="16" markerHeight="10" refX="14" refY="5" orient="auto"><path d="M0,5 L7,1 L14,5 L7,9 z" fill="var(--text)" stroke="var(--text)" stroke-width="1.3"/></marker>
+            </defs>
+            <rect class="box" x="5" y="20" width="45" height="20"/><text x="27.5" y="34" text-anchor="middle" font-size="9.5">Whole</text>
+            <rect class="box" x="130" y="20" width="45" height="20"/><text x="152.5" y="34" text-anchor="middle" font-size="10.5">Part</text>
+            <line class="rel-line" x1="128" y1="30" x2="50" y2="30" marker-end="url(#diafilled1)"/>
+          </svg>
+        </td>
+        <td><strong>Composition</strong></td>
+        <td>"Has-a", <em>strong</em> ownership — part's lifecycle is tied to the whole. Filled diamond. E.g. <code>House</code> ♦— <code>Room</code>.</td>
+      </tr>
+      <tr>
+        <td class="mini-diagram-cell">
+          <svg class="uml-svg" viewBox="0 0 180 60" width="180" height="60">
+            <defs>
+              <marker id="trihollow1" markerWidth="14" markerHeight="12" refX="12" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="var(--bg-card)" stroke="var(--text)" stroke-width="1.3"/></marker>
+            </defs>
+            <rect class="box" x="5" y="20" width="55" height="20"/><text x="32.5" y="34" text-anchor="middle" font-size="9.5">Child</text>
+            <rect class="box" x="120" y="20" width="55" height="20"/><text x="147.5" y="34" text-anchor="middle" font-size="9">Parent</text>
+            <line class="rel-line" x1="60" y1="30" x2="118" y2="30" marker-end="url(#trihollow1)"/>
+          </svg>
+        </td>
+        <td><strong>Inheritance</strong><br/><span style="color:var(--text-dim);font-size:0.82em;">(Generalization)</span></td>
+        <td>"Is-a". Solid line, hollow triangle pointing at the parent. E.g. <code>Member</code> ▷— <code>Person</code>.</td>
+      </tr>
+      <tr>
+        <td class="mini-diagram-cell">
+          <svg class="uml-svg" viewBox="0 0 180 60" width="180" height="60">
+            <defs>
+              <marker id="trihollow2" markerWidth="14" markerHeight="12" refX="12" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="var(--bg-card)" stroke="var(--text)" stroke-width="1.3"/></marker>
+            </defs>
+            <rect class="box" x="5" y="20" width="55" height="20"/><text x="32.5" y="34" text-anchor="middle" font-size="9">Impl.</text>
+            <rect class="box" x="120" y="20" width="55" height="20"/><text x="147.5" y="34" text-anchor="middle" font-size="8.3">Interface</text>
+            <line class="rel-line rel-dashed" x1="60" y1="30" x2="118" y2="30" marker-end="url(#trihollow2)"/>
+          </svg>
+        </td>
+        <td><strong>Realization</strong><br/><span style="color:var(--text-dim);font-size:0.82em;">(Implementation)</span></td>
+        <td>Dashed line, hollow triangle. A class implements an interface/ABC. E.g. <code>CreditCard</code> implements <code>PaymentMethod</code>.</td>
+      </tr>
+      <tr>
+        <td class="mini-diagram-cell">
+          <svg class="uml-svg" viewBox="0 0 180 60" width="180" height="60">
+            <defs>
+              <marker id="arrowopen2" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M1,1 L8,4 L1,7" fill="none" stroke="var(--text)" stroke-width="1.4"/></marker>
+            </defs>
+            <rect class="box" x="5" y="20" width="45" height="20"/><text x="27.5" y="34" text-anchor="middle" font-size="10.5">A</text>
+            <rect class="box" x="130" y="20" width="45" height="20"/><text x="152.5" y="34" text-anchor="middle" font-size="10.5">B</text>
+            <line class="rel-line rel-dashed" x1="50" y1="30" x2="128" y2="30" marker-end="url(#arrowopen2)"/>
+          </svg>
+        </td>
+        <td><strong>Dependency</strong></td>
+        <td>Weak, temporary "uses" — e.g. a parameter or local variable. Dashed line, open arrow. E.g. <code>OrderService</code> ⇢ <code>Logger</code>.</td>
+      </tr>
+    </table>
+
+    <p>How each notation typically shows up in actual Python code:</p>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Engine: pass
+class Logger: pass
+
+class Car:
+    def __init__(self, engine: Engine):
+        self.engine = engine          # Composition -> Car owns Engine's lifecycle
+
+class Garage:
+    def __init__(self):
+        self.cars = []                 # Aggregation -> cars can exist without the garage
+
+    def park(self, car: Car):
+        self.cars.append(car)
+
+class Driver:
+    def drive(self, car: Car):         # Association -> Driver "uses" Car (holds no ref)
+        pass
+
+class ReportGenerator:
+    def generate(self, logger: Logger):  # Dependency -> only used inside this one method
+        logger.write("report generated")
+
+class ElectricCar(Car):                # Inheritance -> ElectricCar IS-A Car
+    pass</code></pre>
+    </div>
+
+    <div class="callout pitfall">
+      <div class="callout-title">🚨 #1 most-confused pair: Aggregation vs Composition</div>
+      <p>Ask yourself: <strong>"If the whole is destroyed, does the part die too?"</strong></p>
+      <ul>
+        <li><strong>Composition</strong>: <code>House</code> and <code>Room</code> — delete the house, the rooms cease to exist. Strong, exclusive ownership.</li>
+        <li><strong>Aggregation</strong>: <code>Library</code> and <code>Member</code> — close the library, the members (people) still exist independently.</li>
+      </ul>
+      <p>In Python code, both often just look like <code>self.rooms = [Room(...)]</code> — the difference is <em>conceptual ownership</em>, not syntax. This is one of the most common interview verbal questions.</p>
+    </div>
+
+    <h2 id="multiplicity">4. Multiplicity Notation</h2>
+    <p>Multiplicity specifies <em>how many</em> instances of one class relate to instances of another — written near each end of a relationship line.</p>
+    <table>
+      <tr><th>Notation</th><th>Meaning</th></tr>
+      <tr><td><code>1</code></td><td>Exactly one</td></tr>
+      <tr><td><code>0..1</code></td><td>Zero or one (optional)</td></tr>
+      <tr><td><code>0..*</code> or <code>*</code></td><td>Zero or many</td></tr>
+      <tr><td><code>1..*</code></td><td>One or many (at least one)</td></tr>
+      <tr><td><code>3</code></td><td>Exactly 3</td></tr>
+      <tr><td><code>2..4</code></td><td>Between 2 and 4</td></tr>
+    </table>
+    <p>Example: <code>Library "1" o-- "0..*" Member</code> reads as "one Library aggregates zero or more Members."</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Library:
+    def __init__(self):
+        self.address: str = None       # multiplicity 1   -> a single value
+        self.manager: "Person" = None  # multiplicity 0..1 -> single value, can be None
+        self.members: list = []        # multiplicity 0..* -> a collection
+        self.founders: list = []       # multiplicity 1..* -> a collection, validated non-empty
+
+    def add_founder(self, person):
+        self.founders.append(person)   # must enforce "at least one" in code yourself</code></pre>
+    </div>
+
+    <h2 id="worked-class-diagram">5. Worked Example: Library Management</h2>
+    <p>A small class diagram combining inheritance, composition, aggregation, and association in one picture:</p>
+
+    <div class="diagram-wrap">
+      <svg class="uml-svg" viewBox="0 0 780 540" width="100%" style="max-width:780px;display:block;margin:0 auto;">
+        <defs>
+          <marker id="cd-tri" markerWidth="14" markerHeight="12" refX="12" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="var(--bg-card)" stroke="var(--text)" stroke-width="1.3"/></marker>
+          <marker id="cd-dia-h" markerWidth="18" markerHeight="12" refX="16" refY="6" orient="auto"><path d="M0,6 L8,1 L16,6 L8,11 z" fill="var(--bg-card)" stroke="var(--text)" stroke-width="1.3"/></marker>
+          <marker id="cd-dia-f" markerWidth="18" markerHeight="12" refX="16" refY="6" orient="auto"><path d="M0,6 L8,1 L16,6 L8,11 z" fill="var(--text)" stroke="var(--text)" stroke-width="1.3"/></marker>
+          <marker id="cd-arrow" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M1,1 L8,4 L1,7" fill="none" stroke="var(--text)" stroke-width="1.4"/></marker>
+        </defs>
+
+        <!-- Person -->
+        <rect class="box" x="290" y="20" width="200" height="110"/>
+        <line class="band-line" x1="290" y1="46" x2="490" y2="46"/>
+        <line class="band-line" x1="290" y1="88" x2="490" y2="88"/>
+        <text class="title-text" x="390" y="38" text-anchor="middle" font-size="12" font-style="italic">Person «abstract»</text>
+        <text x="300" y="63" font-size="10.5"># name: String</text>
+        <text x="300" y="79" font-size="10.5"># personId: String</text>
+        <text x="300" y="105" font-size="10.5">+ getDetails(): String</text>
+
+        <!-- Member -->
+        <rect class="box" x="290" y="220" width="200" height="110"/>
+        <line class="band-line" x1="290" y1="246" x2="490" y2="246"/>
+        <line class="band-line" x1="290" y1="288" x2="490" y2="288"/>
+        <text class="title-text" x="390" y="238" text-anchor="middle" font-size="12">Member</text>
+        <text x="300" y="263" font-size="10.5">- memberId: String</text>
+        <text x="300" y="279" font-size="10.5">- borrowed: [Book]</text>
+        <text x="300" y="305" font-size="10.5">+ borrowBook(b): void</text>
+        <text x="300" y="321" font-size="10.5">+ returnBook(b): void</text>
+
+        <!-- Library -->
+        <rect class="box" x="40" y="400" width="200" height="110"/>
+        <line class="band-line" x1="40" y1="426" x2="240" y2="426"/>
+        <line class="band-line" x1="40" y1="468" x2="240" y2="468"/>
+        <text class="title-text" x="140" y="418" text-anchor="middle" font-size="12">Library</text>
+        <text x="50" y="443" font-size="10.5">- name: String</text>
+        <text x="50" y="459" font-size="10.5">- address: String</text>
+        <text x="50" y="485" font-size="10.5">+ registerMember(m)</text>
+        <text x="50" y="501" font-size="10.5">+ addBook(b): void</text>
+
+        <!-- Book -->
+        <rect class="box" x="540" y="394" width="200" height="126"/>
+        <line class="band-line" x1="540" y1="420" x2="740" y2="420"/>
+        <line class="band-line" x1="540" y1="478" x2="740" y2="478"/>
+        <text class="title-text" x="640" y="412" text-anchor="middle" font-size="12">Book</text>
+        <text x="550" y="437" font-size="10.5">- title: String</text>
+        <text x="550" y="453" font-size="10.5">- isbn: String</text>
+        <text x="550" y="469" font-size="10.5"># isAvailable: bool</text>
+        <text x="550" y="495" font-size="10.5">+ checkOut(): void</text>
+        <text x="550" y="511" font-size="10.5">+ returnBook(): void</text>
+
+        <!-- Inheritance: Member --|> Person -->
+        <line class="rel-line" x1="390" y1="220" x2="390" y2="132" marker-end="url(#cd-tri)"/>
+
+        <!-- Aggregation: Library o-- Member (whole=Library) -->
+        <line class="rel-line" x1="330" y1="330" x2="240" y2="400" marker-end="url(#cd-dia-h)"/>
+        <text class="mult" x="335" y="345">0..*</text>
+        <text class="mult" x="255" y="392">1</text>
+        <text class="rel-label" x="245" y="365">registers</text>
+
+        <!-- Composition: Library *-- Book (whole=Library) -->
+        <line class="rel-line" x1="540" y1="460" x2="240" y2="460" marker-end="url(#cd-dia-f)"/>
+        <text class="mult" x="500" y="452">0..*</text>
+        <text class="mult" x="250" y="452">1</text>
+        <text class="rel-label" x="350" y="445">contains</text>
+
+        <!-- Association: Member borrows Book -->
+        <path class="rel-line" d="M490,275 L650,275 L650,392" marker-end="url(#cd-arrow)"/>
+        <text class="mult" x="497" y="270">1</text>
+        <text class="mult" x="657" y="385">0..*</text>
+        <text class="rel-label" x="560" y="270">borrows</text>
+      </svg>
+      <p class="diagram-caption">Member and Librarian(not shown) inherit Person · Library composes Book · Library aggregates Member · Member borrows Book</p>
+    </div>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class Person(ABC):
+    def __init__(self, name, person_id):
+        self._name = name
+        self._person_id = person_id
+
+    @abstractmethod
+    def get_details(self):
+        pass
+
+class Member(Person):
+    def __init__(self, name, person_id):
+        super().__init__(name, person_id)
+        self.__member_id = person_id
+        self.borrowed_books = []          # association -> Book
+
+    def get_details(self):
+        return f"Member: {self._name}"
+
+    def borrow_book(self, book):
+        self.borrowed_books.append(book)
+
+class Book:
+    def __init__(self, title, isbn):
+        self.title = title
+        self.isbn = isbn
+        self.is_available = True
+
+class Library:
+    def __init__(self, name):
+        self.name = name
+        self.__books = []      # composition -> Book (owned exclusively)
+        self.__members = []    # aggregation -> Member (exists independently)
+
+    def add_book(self, book):
+        self.__books.append(book)
+
+    def register_member(self, member):
+        self.__members.append(member)</code></pre>
+    </div>
+
+    <h2 id="sequence-diagrams">6. Sequence Diagrams</h2>
+    <p>A sequence diagram shows <strong>how objects interact over time</strong> for one specific scenario/use case — which method is called on which object, and in what order. It's the diagram that helps you verify a class design actually works before you commit to it.</p>
+
+    <table>
+      <tr><th>Element</th><th>Notation</th></tr>
+      <tr><td><strong>Actor / Object</strong></td><td>Box at the top of a vertical dashed <strong>lifeline</strong></td></tr>
+      <tr><td><strong>Synchronous call</strong></td><td>Solid line, filled arrowhead — caller waits for the response</td></tr>
+      <tr><td><strong>Return message</strong></td><td>Dashed line, open arrowhead — sent back to the caller</td></tr>
+      <tr><td><strong>Activation bar</strong></td><td>Thin rectangle on a lifeline showing when that object is actively processing</td></tr>
+      <tr><td><strong>Self-message</strong></td><td>Arrow that loops back to the same lifeline — an object calling its own method</td></tr>
+    </table>
+
+    <h3>Worked example: ATM Cash Withdrawal</h3>
+    <div class="diagram-wrap">
+      <svg class="uml-svg" viewBox="0 0 680 440" width="100%" style="max-width:680px;display:block;margin:0 auto;">
+        <defs>
+          <marker id="sd-fill" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="var(--text)"/></marker>
+          <marker id="sd-open" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M1,1 L8,4 L1,7" fill="none" stroke="var(--text)" stroke-width="1.4"/></marker>
+        </defs>
+
+        <!-- actor boxes -->
+        <rect class="box" x="30" y="15" width="140" height="34"/><text class="title-text" x="100" y="36" text-anchor="middle" font-size="12">User</text>
+        <rect class="box" x="270" y="15" width="140" height="34"/><text class="title-text" x="340" y="36" text-anchor="middle" font-size="12">ATM</text>
+        <rect class="box" x="510" y="15" width="140" height="34"/><text class="title-text" x="580" y="36" text-anchor="middle" font-size="12">Bank</text>
+
+        <!-- lifelines -->
+        <line x1="100" y1="49" x2="100" y2="425" stroke="var(--border)" stroke-dasharray="4,4"/>
+        <line x1="340" y1="49" x2="340" y2="425" stroke="var(--border)" stroke-dasharray="4,4"/>
+        <line x1="580" y1="49" x2="580" y2="425" stroke="var(--border)" stroke-dasharray="4,4"/>
+
+        <!-- messages -->
+        <line class="rel-line" x1="100" y1="90" x2="338" y2="90" marker-end="url(#sd-fill)"/>
+        <text class="rel-label" x="105" y="83">1: insertCard()</text>
+
+        <line class="rel-line" x1="342" y1="134" x2="578" y2="134" marker-end="url(#sd-fill)"/>
+        <text class="rel-label" x="347" y="127">2: validateCard(cardNo)</text>
+
+        <line class="rel-line rel-dashed" x1="578" y1="178" x2="342" y2="178" marker-end="url(#sd-open)"/>
+        <text class="rel-label" x="400" y="171">3: cardValid: bool</text>
+
+        <line class="rel-line" x1="338" y1="222" x2="102" y2="222" marker-end="url(#sd-fill)"/>
+        <text class="rel-label" x="145" y="215">4: promptForPIN()</text>
+
+        <line class="rel-line" x1="100" y1="266" x2="338" y2="266" marker-end="url(#sd-fill)"/>
+        <text class="rel-label" x="105" y="259">5: enterPIN(pin, amount)</text>
+
+        <line class="rel-line" x1="342" y1="310" x2="578" y2="310" marker-end="url(#sd-fill)"/>
+        <text class="rel-label" x="347" y="303">6: withdraw(amount)</text>
+
+        <line class="rel-line rel-dashed" x1="578" y1="354" x2="342" y2="354" marker-end="url(#sd-open)"/>
+        <text class="rel-label" x="400" y="347">7: success: bool</text>
+
+        <line class="rel-line" x1="338" y1="398" x2="102" y2="398" marker-end="url(#sd-fill)"/>
+        <text class="rel-label" x="145" y="391">8: dispenseCash()</text>
+      </svg>
+      <p class="diagram-caption">Solid arrows = synchronous calls · dashed arrows = return values</p>
+    </div>
+
+    <div class="callout interview">
+      <div class="callout-title">🎤 When to reach for a sequence diagram in an interview</div>
+      <p>After you've sketched your classes, walk through the <strong>primary use case</strong> (e.g. "book a seat", "withdraw cash") as a sequence of calls out loud or on the whiteboard. This is exactly how interviewers verify your class design actually supports the required behavior — and it often reveals a missing method or a misplaced responsibility before you write any code.</p>
+    </div>
+
+    <div class="revision-box">
+      <h3>📌 Quick Revision — Cheat Sheet</h3>
+      <ul>
+        <li><strong>Class Diagram</strong> = structure (classes + relationships). <strong>Sequence Diagram</strong> = behavior (call order for one use case). These two cover ~95% of interview usage.</li>
+        <li><strong>Association</strong>: plain "uses-a" line. <strong>Dependency</strong>: same but weaker/temporary, dashed.</li>
+        <li><strong>Aggregation (◇)</strong>: has-a, part survives without whole. <strong>Composition (♦)</strong>: has-a, part dies with whole.</li>
+        <li><strong>Inheritance (▷)</strong>: is-a, solid line + hollow triangle at parent. <strong>Realization</strong>: same triangle but dashed line, used for interface/ABC implementation.</li>
+        <li><strong>Multiplicity</strong>: <code>1</code>, <code>0..1</code>, <code>0..*</code>, <code>1..*</code> written near each end of a relationship.</li>
+        <li>Visibility symbols: <code>+</code> public, <code>-</code> private, <code>#</code> protected, <code>~</code> package.</li>
+        <li>Sequence diagrams: solid + filled arrow = sync call; dashed + open arrow = return value; vertical dashed line = lifeline.</li>
+      </ul>
+    </div>
+
+    <h2 id="interview-questions">7. Common Interview Questions</h2>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: Difference between aggregation and composition?</div>
+      <p>Both represent "has-a" relationships, but composition implies the contained object's lifecycle is fully owned by the container (destroy the container, the part goes with it), while aggregation implies the contained object can exist independently. Classic example: a <code>Car</code> is <em>composed of</em> an <code>Engine</code> (can't exist meaningfully without the car), but a <code>Library</code> only <em>aggregates</em> <code>Member</code>s (people exist regardless of library membership).</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: Association vs Dependency?</div>
+      <p>Association is a structural, usually long-lived relationship (often stored as a field, e.g. <code>self.engine</code>). Dependency is a weaker, transient relationship — one class merely <em>uses</em> another briefly, e.g. as a method parameter or local variable, without holding a reference to it long-term.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: How do you show that a class implements an interface?</div>
+      <p>With a <strong>realization</strong> relationship: a dashed line with a hollow triangle pointing at the interface/abstract class. In Python this maps to a concrete class inheriting from an <code>ABC</code> and implementing all its <code>@abstractmethod</code>s.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: Why bother with a sequence diagram if you already have a class diagram?</div>
+      <p>A class diagram shows what's <em>possible</em> (structure); it doesn't prove the design actually <em>works</em> for a real use case. Walking through a sequence diagram forces you to trace an actual call path end-to-end, which is how you catch a missing method, a wrong direction of dependency, or a class doing too much (an SRP violation) before writing code.</p>
+    </div>
+
+    <footer class="page-footer">UML Basics · LLD Revision Notes</footer>
+  </main>
+
+  <aside class="toc">
+    <div class="toc-title">On this page</div>
+    <ul id="toc-list"></ul>
+  </aside>
+</div>
+
+<script src="../js/main.js"></script>
+</body>
+</html>

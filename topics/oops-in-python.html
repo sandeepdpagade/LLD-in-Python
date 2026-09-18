@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OOP in Python — LLD Revision Notes</title>
+<link rel="stylesheet" href="../css/style.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+</head>
+<body data-page="oops" data-root="../">
+
+<header class="topbar">
+  <button id="menu-toggle" class="menu-toggle" aria-label="Toggle menu">☰</button>
+  <div class="brand"><a href="../index.html" style="color:inherit;display:flex;align-items:center;gap:0.5rem;"><span class="logo">LLD</span> LLD in Python</a></div>
+  <div class="controls">
+    <button id="theme-toggle" class="theme-toggle">🌙 Dark</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <nav id="sidebar-nav"></nav>
+  </aside>
+
+  <main class="content">
+    <h1>OOP in Python</h1>
+    <p class="subtitle">Everything you need to confidently answer OOP questions in an LLD interview — with runnable examples.</p>
+
+    <div class="lead-badges">
+      <span class="pill">🧱 Fundamentals</span>
+      <span class="pill">⏱ ~25 min read</span>
+      <span class="pill">🎯 High interview frequency</span>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-title">💡 Why this matters</div>
+      <p>Every LLD interview (Parking Lot, Elevator System, BookMyShow, Splitwise...) is graded on how well you model the real world using classes. If your OOP fundamentals are shaky, the whole design falls apart — so this is the highest-leverage topic to master first.</p>
+    </div>
+
+    <h2 id="what-is-oop">1. What is OOP?</h2>
+    <p>Object-Oriented Programming is a paradigm that organizes code around <strong>objects</strong> — bundles of <strong>data (attributes)</strong> and <strong>behavior (methods)</strong> — instead of just functions acting on raw data. Python is a fully object-oriented language: even integers and functions are objects.</p>
+
+    <p>OOP is built on <strong>4 pillars</strong>, which is almost always the first thing interviewers ask you to name:</p>
+    <table>
+      <tr><th>Pillar</th><th>One-line definition</th></tr>
+      <tr><td><strong>Encapsulation</strong></td><td>Bundling data + methods together, and restricting direct access to internal state</td></tr>
+      <tr><td><strong>Abstraction</strong></td><td>Hiding implementation details, exposing only what's necessary</td></tr>
+      <tr><td><strong>Inheritance</strong></td><td>Acquiring properties/behavior of a parent class in a child class</td></tr>
+      <tr><td><strong>Polymorphism</strong></td><td>Same interface, different underlying implementation/behavior</td></tr>
+    </table>
+
+    <p>All 4 in one glance, using a <code>Vault</code> class you'll recognize the shape of throughout this page:</p>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class Storage(ABC):                    # Abstraction: a contract, no implementation
+    @abstractmethod
+    def unlock(self, code): pass
+
+class Vault(Storage):                  # Inheritance: Vault IS-A Storage
+    def __init__(self, pin):
+        self.__pin = pin                # Encapsulation: pin is hidden (name-mangled)
+
+    def unlock(self, code):             # Polymorphism: overrides Storage's contract
+        return "Unlocked!" if code == self.__pin else "Wrong code"
+
+print(Vault(1234).unlock(1234))         # Unlocked!</code></pre>
+    </div>
+
+    <h2 id="classes-objects">2. Classes and Objects</h2>
+    <p>A <strong>class</strong> is a blueprint. An <strong>object</strong> (a.k.a. instance) is a concrete thing built from that blueprint, with its own copy of the data.</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Car:
+    pass
+
+# Objects / instances
+car1 = Car()
+car2 = Car()
+
+print(type(car1))          # &lt;class '__main__.Car'&gt;
+print(car1 is car2)        # False -> different objects in memory</code></pre>
+    </div>
+
+    <h2 id="init-self">3. <code>__init__</code> and <code>self</code></h2>
+    <p><code>__init__</code> is the <strong>constructor</strong> — it runs automatically right after an object is created, and is used to initialize instance attributes. <code>self</code> is a reference to the current instance; it must be the first parameter of every instance method (Python passes it automatically, you never pass it manually).</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Car:
+    def __init__(self, brand, model):
+        self.brand = brand      # instance attribute
+        self.model = model
+
+    def describe(self):
+        return f"{self.brand} {self.model}"
+
+car1 = Car("Toyota", "Corolla")
+car2 = Car("Honda", "Civic")
+
+print(car1.describe())   # Toyota Corolla
+print(car2.describe())   # Honda Civic</code></pre>
+    </div>
+
+    <div class="callout warn">
+      <div class="callout-title">⚠️ Common gotcha</div>
+      <p><code>__init__</code> is <em>not</em> a constructor in the strict sense — <code>__new__</code> actually creates the object; <code>__init__</code> only initializes it. This distinction occasionally comes up when discussing singletons or immutable types.</p>
+    </div>
+
+    <h2 id="instance-vs-class-vars">4. Instance Variables vs Class Variables</h2>
+    <ul>
+      <li><strong>Instance variables</strong>: defined inside methods using <code>self.x</code>. Unique to each object.</li>
+      <li><strong>Class variables</strong>: defined directly inside the class body. Shared across <em>all</em> instances.</li>
+    </ul>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Car:
+    wheels = 4  # class variable — shared by every Car
+
+    def __init__(self, brand):
+        self.brand = brand  # instance variable — unique per object
+
+car1 = Car("Toyota")
+car2 = Car("Honda")
+
+print(car1.wheels, car2.wheels)  # 4 4
+
+Car.wheels = 6          # change on the class
+print(car1.wheels)      # 6 -> reflected everywhere
+
+car1.wheels = 3         # this creates a NEW instance attribute on car1 only!
+print(car1.wheels, car2.wheels)   # 3 6</code></pre>
+    </div>
+
+    <div class="callout pitfall">
+      <div class="callout-title">🚨 Classic pitfall — mutable class variables</div>
+      <p>Never use a mutable default (list/dict) as a class variable if you expect per-instance data — all instances will share and mutate the <em>same</em> object.</p>
+      <div class="code-block">
+        <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+        <pre><code class="language-python">class Bad:
+    items = []  # shared across ALL instances!
+    def add(self, x):
+        self.items.append(x)
+
+a, b = Bad(), Bad()
+a.add(1)
+print(b.items)   # [1]  <- leaked into b! Almost never what you want.
+
+# Fix: initialize per-instance in __init__
+class Good:
+    def __init__(self):
+        self.items = []</code></pre>
+      </div>
+    </div>
+
+    <h2 id="methods">5. Instance Methods vs Class Methods vs Static Methods</h2>
+    <table>
+      <tr><th>Type</th><th>Decorator</th><th>First arg</th><th>Use case</th></tr>
+      <tr><td>Instance method</td><td>none</td><td><code>self</code></td><td>Operates on/reads instance state</td></tr>
+      <tr><td>Class method</td><td><code>@classmethod</code></td><td><code>cls</code></td><td>Operates on class state; alternate constructors</td></tr>
+      <tr><td>Static method</td><td><code>@staticmethod</code></td><td>none</td><td>Utility function logically grouped with the class</td></tr>
+    </table>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Employee:
+    company = "Acme Corp"
+
+    def __init__(self, name, salary):
+        self.name = name
+        self.salary = salary
+
+    def give_raise(self, amount):          # instance method
+        self.salary += amount
+
+    @classmethod
+    def from_string(cls, data_str):        # alternate constructor
+        name, salary = data_str.split("-")
+        return cls(name, int(salary))
+
+    @classmethod
+    def change_company(cls, new_name):     # modifies class-level state
+        cls.company = new_name
+
+    @staticmethod
+    def is_valid_salary(salary):           # pure utility, no self/cls needed
+        return salary > 0
+
+e1 = Employee.from_string("Alice-50000")
+print(e1.name, e1.salary)                  # Alice 50000
+print(Employee.is_valid_salary(-100))      # False</code></pre>
+    </div>
+
+    <div class="callout interview">
+      <div class="callout-title">🎤 Interview one-liner</div>
+      <p>"Use <code>@classmethod</code> when the logic needs the class itself (e.g. factory methods like <code>from_json</code>), and <code>@staticmethod</code> when the logic is related to the class conceptually but needs neither <code>self</code> nor <code>cls</code>."</p>
+    </div>
+
+    <h2 id="encapsulation">6. Encapsulation</h2>
+    <p>Encapsulation means restricting direct access to an object's internals and exposing controlled access through methods/properties. Python doesn't have true "private" members (no strict access modifiers) — it relies on <strong>naming conventions</strong>.</p>
+
+    <table>
+      <tr><th>Convention</th><th>Meaning</th><th>Enforced?</th></tr>
+      <tr><td><code>public_var</code></td><td>Public — accessible anywhere</td><td>—</td></tr>
+      <tr><td><code>_protected_var</code></td><td>Convention: internal use / subclasses only</td><td>No, just a hint</td></tr>
+      <tr><td><code>__private_var</code></td><td>Name-mangled to <code>_ClassName__private_var</code></td><td>Mostly — discourages accidental access</td></tr>
+    </table>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class BankAccount:
+    def __init__(self, balance):
+        self.__balance = balance   # name-mangled -> _BankAccount__balance
+
+    def deposit(self, amount):
+        if amount &lt;= 0:
+            raise ValueError("Deposit must be positive")
+        self.__balance += amount
+
+    def get_balance(self):
+        return self.__balance
+
+acc = BankAccount(1000)
+acc.deposit(500)
+print(acc.get_balance())     # 1500
+print(acc._BankAccount__balance)  # 1500 -> still technically accessible!</code></pre>
+    </div>
+
+    <h3>The Pythonic way: <code>@property</code></h3>
+    <p>Instead of writing Java-style <code>get_x()</code>/<code>set_x()</code>, Python uses the <code>@property</code> decorator to expose controlled access while keeping the clean attribute syntax (<code>obj.x</code> instead of <code>obj.get_x()</code>).</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Temperature:
+    def __init__(self, celsius):
+        self._celsius = celsius
+
+    @property
+    def celsius(self):
+        return self._celsius
+
+    @celsius.setter
+    def celsius(self, value):
+        if value &lt; -273.15:
+            raise ValueError("Below absolute zero!")
+        self._celsius = value
+
+    @property
+    def fahrenheit(self):              # read-only computed property
+        return self._celsius * 9 / 5 + 32
+
+t = Temperature(25)
+print(t.celsius)        # 25          (looks like an attribute)
+print(t.fahrenheit)     # 77.0        (computed on the fly)
+t.celsius = 30          # goes through the setter's validation
+t.celsius = -300        # raises ValueError</code></pre>
+    </div>
+
+    <h2 id="inheritance">7. Inheritance</h2>
+    <p>Inheritance lets a class (child/subclass) reuse and extend the attributes/methods of another class (parent/superclass) — an <strong>"is-a"</strong> relationship (a <code>Dog</code> is an <code>Animal</code>).</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Animal:
+    def __init__(self, name):
+        self.name = name
+
+    def speak(self):
+        return "..."
+
+class Dog(Animal):
+    def speak(self):               # method overriding
+        return f"{self.name} says Woof!"
+
+class Puppy(Dog):
+    def speak(self):
+        parent_sound = super().speak()   # call parent's implementation
+        return f"{parent_sound} (but tiny)"
+
+p = Puppy("Rex")
+print(p.speak())   # Rex says Woof! (but tiny)
+print(isinstance(p, Animal))   # True -> Puppy IS-A Animal too</code></pre>
+    </div>
+
+    <h3>Types of inheritance</h3>
+    <table>
+      <tr><th>Type</th><th>Description</th></tr>
+      <tr><td>Single</td><td><code>class B(A)</code> — one parent, one child</td></tr>
+      <tr><td>Multilevel</td><td><code>class C(B)</code> where <code>class B(A)</code> — a chain</td></tr>
+      <tr><td>Hierarchical</td><td>Multiple children inherit from the same parent</td></tr>
+      <tr><td>Multiple</td><td><code>class D(A, B)</code> — child inherits from more than one parent</td></tr>
+      <tr><td>Hybrid</td><td>A combination of the above</td></tr>
+    </table>
+
+    <h3>Multiple inheritance &amp; MRO (Method Resolution Order)</h3>
+    <p>When multiple parents define the same method, Python decides which one wins using <strong>MRO</strong>, computed via the <strong>C3 linearization</strong> algorithm. You can always inspect it with <code>ClassName.__mro__</code> or <code>ClassName.mro()</code>.</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class A:
+    def greet(self):
+        return "Hello from A"
+
+class B(A):
+    def greet(self):
+        return "Hello from B"
+
+class C(A):
+    def greet(self):
+        return "Hello from C"
+
+class D(B, C):   # the classic "diamond problem"
+    pass
+
+d = D()
+print(d.greet())          # Hello from B  -> left-to-right, depth-first, but C3-linearized
+print(D.__mro__)
+# (D, B, C, A, object)  -> B is checked before C, C before A</code></pre>
+    </div>
+
+    <div class="callout interview">
+      <div class="callout-title">🎤 Diamond problem explained simply</div>
+      <p>If <code>B</code> and <code>C</code> both inherit from <code>A</code>, and <code>D</code> inherits from both <code>B</code> and <code>C</code>, which version of a method does <code>D</code> get if both <code>B</code> and <code>C</code> override it? Python resolves this deterministically via MRO (<code>D → B → C → A → object</code>), unlike languages such as C++ where it can be ambiguous.</p>
+    </div>
+
+    <h2 id="polymorphism">8. Polymorphism</h2>
+    <p>"Many forms" — the same method name/interface behaves differently depending on the object calling it. In Python this shows up in three main flavors:</p>
+
+    <h3>a) Method Overriding (runtime polymorphism)</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Shape:
+    def area(self):
+        raise NotImplementedError
+
+class Circle(Shape):
+    def __init__(self, r): self.r = r
+    def area(self): return 3.14 * self.r ** 2
+
+class Square(Shape):
+    def __init__(self, s): self.s = s
+    def area(self): return self.s ** 2
+
+for shape in [Circle(2), Square(3)]:
+    print(shape.area())     # calls the correct .area() for each type automatically</code></pre>
+    </div>
+
+    <h3>b) Duck Typing</h3>
+    <p>Python doesn't check types before calling a method — "if it walks like a duck and quacks like a duck, it's a duck." Any object with the right method can be used, regardless of inheritance.</p>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Duck:
+    def sound(self): return "Quack"
+
+class Human:
+    def sound(self): return "I'm quacking!"
+
+def make_it_sound(entity):
+    print(entity.sound())   # no type checking, just calls .sound()
+
+make_it_sound(Duck())    # Quack
+make_it_sound(Human())   # I'm quacking!</code></pre>
+    </div>
+
+    <h3>c) Operator Overloading</h3>
+    <p>Give built-in operators (<code>+</code>, <code>==</code>, <code>&lt;</code>...) custom meaning for your own classes via dunder methods.</p>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Vector:
+    def __init__(self, x, y):
+        self.x, self.y = x, y
+
+    def __add__(self, other):
+        return Vector(self.x + other.x, self.y + other.y)
+
+    def __repr__(self):
+        return f"Vector({self.x}, {self.y})"
+
+v1, v2 = Vector(1, 2), Vector(3, 4)
+print(v1 + v2)     # Vector(4, 6) -> "+" now works on Vector objects</code></pre>
+    </div>
+
+    <h2 id="abstraction">9. Abstraction</h2>
+    <p>Abstraction hides <em>how</em> something is done and exposes only <em>what</em> it does. In Python this is formalized with the <code>abc</code> module — an <strong>Abstract Base Class (ABC)</strong> defines a contract that subclasses must fulfill.</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class PaymentMethod(ABC):
+    @abstractmethod
+    def pay(self, amount):
+        pass          # no implementation -> subclasses MUST override this
+
+    def receipt(self):   # concrete method -> shared by all subclasses
+        return "Thank you for your payment!"
+
+class CreditCard(PaymentMethod):
+    def pay(self, amount):
+        return f"Paid {amount} using Credit Card"
+
+class UPI(PaymentMethod):
+    def pay(self, amount):
+        return f"Paid {amount} using UPI"
+
+# PaymentMethod()        # TypeError: Can't instantiate abstract class
+cc = CreditCard()
+print(cc.pay(500))       # Paid 500 using Credit Card
+print(cc.receipt())      # Thank you for your payment!</code></pre>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-title">💡 Why this matters for LLD</div>
+      <p>Abstract classes/interfaces are how you satisfy the <strong>Open/Closed Principle</strong> and enable <strong>Strategy</strong> / <strong>Factory</strong> patterns — e.g. a <code>PaymentStrategy</code> interface lets you plug in new payment types without touching existing checkout code. Expect to define at least one ABC in almost every LLD round.</p>
+    </div>
+
+    <h2 id="dunder-methods">10. Dunder (Magic) Methods Cheat Sheet</h2>
+    <p>These let your custom objects integrate naturally with Python's built-in syntax and functions.</p>
+    <table>
+      <tr><th>Method</th><th>Triggered by</th><th>Purpose</th></tr>
+      <tr><td><code>__init__</code></td><td><code>ClassName(...)</code></td><td>Initialize a new instance</td></tr>
+      <tr><td><code>__repr__</code></td><td><code>repr(obj)</code>, console echo</td><td>Unambiguous, dev-facing representation</td></tr>
+      <tr><td><code>__str__</code></td><td><code>str(obj)</code>, <code>print(obj)</code></td><td>Readable, user-facing representation</td></tr>
+      <tr><td><code>__eq__</code></td><td><code>obj1 == obj2</code></td><td>Custom equality logic</td></tr>
+      <tr><td><code>__lt__</code></td><td><code>obj1 &lt; obj2</code></td><td>Enables sorting / comparisons</td></tr>
+      <tr><td><code>__len__</code></td><td><code>len(obj)</code></td><td>Custom length behavior</td></tr>
+      <tr><td><code>__getitem__</code></td><td><code>obj[key]</code></td><td>Indexing / slicing support</td></tr>
+      <tr><td><code>__iter__</code></td><td><code>for x in obj</code></td><td>Makes an object iterable</td></tr>
+      <tr><td><code>__call__</code></td><td><code>obj(...)</code></td><td>Makes an instance callable like a function</td></tr>
+      <tr><td><code>__enter__</code>/<code>__exit__</code></td><td><code>with obj as x:</code></td><td>Context manager protocol</td></tr>
+    </table>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Book:
+    def __init__(self, title, pages):
+        self.title, self.pages = title, pages
+
+    def __repr__(self):
+        return f"Book('{self.title}', {self.pages})"   # for debugging
+
+    def __str__(self):
+        return f"{self.title} ({self.pages} pages)"     # for humans
+
+    def __eq__(self, other):
+        return self.pages == other.pages
+
+    def __lt__(self, other):
+        return self.pages &lt; other.pages
+
+b1 = Book("Clean Code", 464)
+b2 = Book("The Hobbit", 310)
+
+print(b1)                     # Clean Code (464 pages)   -> __str__
+print([b1, b2])                # [Book('Clean Code', 464), Book('The Hobbit', 310)] -> __repr__
+print(b1 == b2)                # False -> __eq__
+print(sorted([b1, b2]))        # sorted by pages using __lt__</code></pre>
+    </div>
+
+    <div class="callout warn">
+      <div class="callout-title">⚠️ __eq__ without __hash__</div>
+      <p>Defining <code>__eq__</code> automatically sets <code>__hash__</code> to <code>None</code>, making instances unhashable (can't be used in a <code>set</code> or as a <code>dict</code> key). Define <code>__hash__</code> explicitly if you need both.</p>
+    </div>
+
+    <h2 id="composition">11. Composition vs Inheritance</h2>
+    <p>Composition models a <strong>"has-a"</strong> relationship by holding a reference to another object, instead of extending it. The well-known guideline: <strong>"favor composition over inheritance"</strong> — it keeps classes more loosely coupled and flexible.</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python"># Inheritance -> "is-a": tightly coupled to parent's implementation
+class Engine:
+    def start(self):
+        return "Engine starting..."
+
+# Composition -> "has-a": Car HAS an Engine, doesn't extend it
+class Car:
+    def __init__(self):
+        self.engine = Engine()      # composed, not inherited
+
+    def start(self):
+        return self.engine.start()
+
+car = Car()
+print(car.start())   # Engine starting...
+# Swapping engines (e.g. ElectricEngine) requires zero change to Car's class hierarchy</code></pre>
+    </div>
+
+    <table>
+      <tr><th></th><th>Inheritance</th><th>Composition</th></tr>
+      <tr><td>Relationship</td><td>is-a</td><td>has-a</td></tr>
+      <tr><td>Coupling</td><td>Tight (child depends on parent internals)</td><td>Loose (depends only on interface)</td></tr>
+      <tr><td>Flexibility</td><td>Fixed at compile/class-definition time</td><td>Can swap components at runtime</td></tr>
+      <tr><td>When to use</td><td>Clear taxonomy, shared behavior truly universal</td><td>Almost always preferred in LLD answers</td></tr>
+    </table>
+
+    <div class="revision-box">
+      <h3>📌 Quick Revision — Cheat Sheet</h3>
+      <ul>
+        <li><strong>4 Pillars:</strong> Encapsulation, Abstraction, Inheritance, Polymorphism</li>
+        <li><strong>self</strong> = current instance, passed automatically to instance methods</li>
+        <li><strong>Class var</strong> shared across instances; <strong>instance var</strong> unique per object</li>
+        <li><strong>@classmethod</strong> → alternate constructors / class-level state (<code>cls</code>)</li>
+        <li><strong>@staticmethod</strong> → utility function, no <code>self</code>/<code>cls</code> needed</li>
+        <li><strong>Encapsulation</strong>: <code>_protected</code> (convention), <code>__private</code> (name-mangled), <code>@property</code> for controlled access</li>
+        <li><strong>Inheritance</strong>: is-a relationship; <code>super()</code> calls parent; MRO resolves diamond problem</li>
+        <li><strong>Polymorphism</strong>: method overriding, duck typing, operator overloading (dunder methods)</li>
+        <li><strong>Abstraction</strong>: <code>ABC</code> + <code>@abstractmethod</code> define a contract subclasses must implement</li>
+        <li><strong>Composition &gt; Inheritance</strong> in most real LLD designs — favor "has-a" for flexibility</li>
+      </ul>
+    </div>
+
+    <h2 id="interview-questions">12. Common Interview Questions</h2>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: Difference between overloading and overriding?</div>
+      <p><strong>Overriding</strong> = child redefines a parent's method (runtime, needs inheritance). Python has no true <strong>method overloading</strong> (same name, different signatures) like Java — the last-defined method simply wins. Simulate it with default args, <code>*args</code>/<code>**kwargs</code>, or <code>functools.singledispatch</code>.</p>
+      <div class="code-block">
+        <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+        <pre><code class="language-python">class Calculator:
+    def add(self, a, b, c=0):   # simulate overloading with a default arg
+        return a + b + c
+
+calc = Calculator()
+print(calc.add(2, 3))       # 5   -> "two-argument" version
+print(calc.add(2, 3, 4))    # 9   -> "three-argument" version
+# Only ONE method is ever defined -> this is overloading simulation, not real overriding.</code></pre>
+      </div>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: Can you instantiate an abstract class?</div>
+      <p>No — Python raises <code>TypeError</code> if any <code>@abstractmethod</code> is left unimplemented. This is enforced by the <code>ABCMeta</code> metaclass that <code>ABC</code> uses under the hood.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: Is Python "truly" encapsulated?</div>
+      <p>No — Python favors "we're all consenting adults" and uses naming conventions (<code>_</code>, <code>__</code>) rather than compiler-enforced access modifiers like <code>private</code> in Java/C++. <code>__private</code> is only name-mangled, not hidden.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: What's the difference between __new__ and __init__?</div>
+      <p><code>__new__</code> is a static method that actually <strong>creates and returns</strong> the new object (allocates memory); <code>__init__</code> then <strong>initializes</strong> its attributes. <code>__new__</code> is rarely overridden except for singletons or immutable types (like subclassing <code>tuple</code>/<code>str</code>).</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: Why favor composition over inheritance?</div>
+      <p>Deep inheritance hierarchies become fragile ("fragile base class" problem) and tightly couple subclasses to parent implementation details. Composition lets you change behavior at runtime by swapping out the composed object, and avoids forcing an "is-a" relationship where a "has-a"/"uses-a" one is more accurate.</p>
+    </div>
+
+    <footer class="page-footer">OOP in Python · LLD Revision Notes</footer>
+  </main>
+
+  <aside class="toc">
+    <div class="toc-title">On this page</div>
+    <ul id="toc-list"></ul>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>
