@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Structural Design Patterns — LLD Revision Notes</title>
+<link rel="stylesheet" href="../css/style.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+<style>
+  .pattern-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 800;
+    font-size: 1.05rem;
+    margin-right: 0.6rem;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body data-page="structural" data-root="../">
+
+<header class="topbar">
+  <button id="menu-toggle" class="menu-toggle" aria-label="Toggle menu">☰</button>
+  <div class="brand"><a href="../index.html" style="color:inherit;display:flex;align-items:center;gap:0.5rem;"><span class="logo">LLD</span> LLD in Python</a></div>
+  <div class="controls">
+    <a class="github-link" href="https://github.com/sandeepdpagade/LLD-in-Python" target="_blank" rel="noopener" aria-label="View source on GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span class="github-label">GitHub</span>
+    </a>
+    <button id="theme-toggle" class="theme-toggle">🌙 Dark</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <nav id="sidebar-nav"></nav>
+  </aside>
+
+  <main class="content">
+    <h1>Structural Design Patterns</h1>
+    <p class="subtitle">Patterns that deal with <em>how classes and objects are composed together</em> — Adapter, Decorator, Facade, Composite, and Proxy.</p>
+
+    <div class="lead-badges">
+      <span class="pill">🧩 Design Patterns</span>
+      <span class="pill">⏱ ~25 min read</span>
+      <span class="pill">🎯 GoF Structural family</span>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-title">💡 Why this matters</div>
+      <p>Structural patterns are all about composing existing classes into larger structures without touching their source code. All five patterns on this page achieve this by <strong>wrapping one object inside another</strong> — the differences between them are almost entirely about <em>intent</em>, which makes them easy to confuse. Pay close attention to the comparison table near the bottom.</p>
+    </div>
+
+    <h2 id="overview">Overview</h2>
+    <table>
+      <tr><th>Pattern</th><th>Solves</th><th>One-line rule</th></tr>
+      <tr><td><strong>Adapter</strong></td><td>Two incompatible interfaces need to work together</td><td>Wrap one interface to look like another</td></tr>
+      <tr><td><strong>Decorator</strong></td><td>Need to add behavior without subclass explosion</td><td>Wrap an object to add responsibilities, same interface</td></tr>
+      <tr><td><strong>Facade</strong></td><td>A subsystem has too many moving parts to use directly</td><td>Wrap many classes behind one simple interface</td></tr>
+      <tr><td><strong>Composite</strong></td><td>Need to treat single objects and groups identically</td><td>Tree structure where nodes and leaves share an interface</td></tr>
+      <tr><td><strong>Proxy</strong></td><td>Need to control/delay/guard access to an object</td><td>Wrap an object with the same interface to intercept access</td></tr>
+    </table>
+
+    <h2 id="adapter"><span class="pattern-badge">1</span>Adapter</h2>
+    <p><strong>Intent:</strong> Convert the interface of one class into another interface the client expects, so two otherwise-incompatible pieces of code can work together — without modifying either one.</p>
+    <p><strong>Real-world LLD example:</strong> You integrate a third-party payment SDK whose method is <code>make_payment(amount_in_cents)</code>, but your app's checkout code is built around a <code>PaymentProcessor.pay(amount_in_dollars)</code> interface.</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+# Your app's expected interface
+class PaymentProcessor(ABC):
+    @abstractmethod
+    def pay(self, amount_dollars: float): pass
+
+# A third-party SDK you can't modify — incompatible interface
+class StripeSDK:
+    def make_payment(self, amount_cents: int):
+        print(f"Charged {amount_cents} cents via Stripe")
+
+# Adapter bridges the gap
+class StripeAdapter(PaymentProcessor):
+    def __init__(self, stripe_sdk: StripeSDK):
+        self.stripe_sdk = stripe_sdk
+
+    def pay(self, amount_dollars: float):
+        cents = int(amount_dollars * 100)
+        self.stripe_sdk.make_payment(cents)     # translates the call
+
+def checkout(processor: PaymentProcessor, amount: float):
+    processor.pay(amount)
+
+checkout(StripeAdapter(StripeSDK()), 19.99)   # Charged 1999 cents via Stripe
+# checkout() only ever talks to PaymentProcessor -> never needs to know Stripe exists</code></pre>
+    </div>
+
+    <div class="callout interview">
+      <div class="callout-title">🎤 Interview one-liner</div>
+      <p>Adapter is what you reach for whenever you say "I need to plug in a third-party library / legacy class that doesn't match my interface." It changes the <strong>interface</strong> — the behavior underneath stays exactly the same.</p>
+    </div>
+
+    <h2 id="decorator"><span class="pattern-badge">2</span>Decorator</h2>
+    <p><strong>Intent:</strong> Attach new behavior to an object dynamically by wrapping it, as a flexible alternative to subclassing every possible combination of features.</p>
+    <p><strong>Real-world LLD example:</strong> A coffee shop ordering system where a base <code>Coffee</code> can have any combination of Milk, Sugar, Whip — creating a subclass for every combination (<code>MilkSugarCoffee</code>, <code>MilkWhipCoffee</code>...) would explode combinatorially.</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class Coffee(ABC):
+    @abstractmethod
+    def cost(self) -> float: pass
+    @abstractmethod
+    def description(self) -> str: pass
+
+class SimpleCoffee(Coffee):
+    def cost(self): return 2.0
+    def description(self): return "Coffee"
+
+class CoffeeDecorator(Coffee):              # wraps a Coffee, matches Coffee's interface
+    def __init__(self, coffee: Coffee):
+        self._coffee = coffee
+    def cost(self): return self._coffee.cost()
+    def description(self): return self._coffee.description()
+
+class MilkDecorator(CoffeeDecorator):
+    def cost(self): return self._coffee.cost() + 0.5
+    def description(self): return self._coffee.description() + " + Milk"
+
+class SugarDecorator(CoffeeDecorator):
+    def cost(self): return self._coffee.cost() + 0.2
+    def description(self): return self._coffee.description() + " + Sugar"
+
+order = SugarDecorator(MilkDecorator(SimpleCoffee()))
+print(order.description(), "->", f"${order.cost()}")
+# Coffee + Milk + Sugar -> $2.7
+# Any combination, in any order, with zero new subclasses.</code></pre>
+    </div>
+
+    <div class="callout warn">
+      <div class="callout-title">⚠️ Don't confuse this with Python's <code>@decorator</code> syntax</div>
+      <p>Python's <code>@my_decorator</code> function syntax is a <strong>language feature</strong> for wrapping functions (e.g. <code>@staticmethod</code>, <code>@property</code>, <code>@app.route</code>). The <strong>Decorator design pattern</strong> above is a separate, broader OOP concept about wrapping objects to add behavior — they share a name and a similar idea ("wrap to extend"), but are not the same thing. Interviewers sometimes ask you to point out this distinction explicitly.</p>
+    </div>
+
+    <h2 id="facade"><span class="pattern-badge">3</span>Facade</h2>
+    <p><strong>Intent:</strong> Provide a single, simplified interface to a complex subsystem made up of many interacting classes, hiding that complexity from the client.</p>
+    <p><strong>Real-world LLD example:</strong> Placing an order touches inventory, payment, and shipping subsystems — the client shouldn't need to know or coordinate all three.</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class InventoryService:
+    def check_stock(self, item):
+        print(f"Checking stock for {item}...")
+        return True
+
+class PaymentService:
+    def charge(self, amount):
+        print(f"Charging ${amount}...")
+
+class ShippingService:
+    def ship(self, item):
+        print(f"Shipping {item}...")
+
+class OrderFacade:                          # one simple entry point
+    def __init__(self):
+        self.inventory = InventoryService()
+        self.payment = PaymentService()
+        self.shipping = ShippingService()
+
+    def place_order(self, item, amount):
+        if self.inventory.check_stock(item):
+            self.payment.charge(amount)
+            self.shipping.ship(item)
+            print("Order placed!")
+
+OrderFacade().place_order("Laptop", 999)
+# Client calls ONE method; never touches Inventory/Payment/Shipping directly.</code></pre>
+    </div>
+
+    <div class="callout interview">
+      <div class="callout-title">🎤 Interview one-liner</div>
+      <p>Facade doesn't add new behavior or change any interface — it just <strong>hides orchestration complexity</strong>. The subsystem classes still exist and can still be used directly by code that needs finer control; the Facade is a convenience layer, not a replacement.</p>
+    </div>
+
+    <h2 id="composite"><span class="pattern-badge">4</span>Composite</h2>
+    <p><strong>Intent:</strong> Compose objects into tree structures representing part-whole hierarchies, so client code can treat an individual object and a group of objects <em>uniformly</em>, through the same interface.</p>
+    <p><strong>Real-world LLD example:</strong> A file system, where a <code>Folder</code> can contain both <code>File</code>s and other <code>Folder</code>s, and you want <code>get_size()</code> to work identically on either.</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class FileSystemItem(ABC):
+    @abstractmethod
+    def get_size(self) -> int: pass
+
+class File(FileSystemItem):                 # leaf
+    def __init__(self, name, size):
+        self.name = name
+        self.size = size
+    def get_size(self):
+        return self.size
+
+class Folder(FileSystemItem):               # composite -> holds other FileSystemItems
+    def __init__(self, name):
+        self.name = name
+        self.children = []
+    def add(self, item: FileSystemItem):
+        self.children.append(item)
+    def get_size(self):
+        return sum(child.get_size() for child in self.children)
+
+root = Folder("root")
+root.add(File("resume.pdf", 200))
+docs = Folder("docs")
+docs.add(File("notes.txt", 50))
+docs.add(File("photo.png", 500))
+root.add(docs)
+
+print(root.get_size())    # 750 -> works whether children are Files or nested Folders</code></pre>
+    </div>
+
+    <div class="callout interview">
+      <div class="callout-title">🎤 Interview one-liner</div>
+      <p>Composite is the pattern behind any recursive "tree" structure: file systems, UI component hierarchies (a <code>Panel</code> containing <code>Button</code>s and other <code>Panel</code>s), org charts (an <code>Employee</code> that may or may not manage other <code>Employee</code>s). The tell is when client code says "I don't care if this is one item or a group of items."</p>
+    </div>
+
+    <h2 id="proxy"><span class="pattern-badge">5</span>Proxy</h2>
+    <p><strong>Intent:</strong> Provide a stand-in object with the <em>same interface</em> as a real object, to control access to it — for lazy loading, access control, caching, or logging, without the client knowing the difference.</p>
+    <p><strong>Real-world LLD example:</strong> A large image that shouldn't be loaded from disk until it's actually displayed (lazy loading).</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class Image(ABC):
+    @abstractmethod
+    def display(self): pass
+
+class RealImage(Image):
+    def __init__(self, filename):
+        self.filename = filename
+        self._load_from_disk()              # expensive!
+    def _load_from_disk(self):
+        print(f"Loading {self.filename} from disk...")
+    def display(self):
+        print(f"Displaying {self.filename}")
+
+class ProxyImage(Image):                     # same interface as RealImage
+    def __init__(self, filename):
+        self.filename = filename
+        self._real_image = None              # not loaded yet
+
+    def display(self):
+        if self._real_image is None:         # lazy initialization
+            self._real_image = RealImage(self.filename)
+        self._real_image.display()
+
+image = ProxyImage("vacation.jpg")           # nothing loaded yet
+image.display()   # Loading vacation.jpg from disk... / Displaying vacation.jpg
+image.display()   # Displaying vacation.jpg  -> already loaded, no repeat disk hit</code></pre>
+    </div>
+
+    <h2 id="comparison">The "Wrapper Pattern" Comparison</h2>
+    <p>Adapter, Decorator, Facade, and Proxy all wrap another object — this table is the fastest way to keep them straight in an interview:</p>
+    <table>
+      <tr><th>Pattern</th><th>Changes the interface?</th><th>Changes/adds behavior?</th><th>Number of objects wrapped</th></tr>
+      <tr><td><strong>Adapter</strong></td><td>Yes — translates to a different interface</td><td>No — same behavior, different shape</td><td>One</td></tr>
+      <tr><td><strong>Decorator</strong></td><td>No — same interface</td><td>Yes — adds new behavior/responsibility</td><td>One (nestable)</td></tr>
+      <tr><td><strong>Facade</strong></td><td>Yes — offers a new, simpler interface</td><td>No — just orchestrates existing behavior</td><td>Many (a whole subsystem)</td></tr>
+      <tr><td><strong>Proxy</strong></td><td>No — identical interface</td><td>No new behavior — controls <em>access</em> (lazy load, auth, cache)</td><td>One</td></tr>
+    </table>
+
+    <div class="revision-box">
+      <h3>📌 Quick Revision — Cheat Sheet</h3>
+      <ul>
+        <li><strong>Adapter</strong> — makes two incompatible interfaces work together. "Translator."</li>
+        <li><strong>Decorator</strong> — adds behavior dynamically, same interface, stackable. "Add-ons."</li>
+        <li><strong>Facade</strong> — one simple interface hiding a complex subsystem. "Front desk."</li>
+        <li><strong>Composite</strong> — tree of objects, leaf and group share one interface. "Uniform recursion."</li>
+        <li><strong>Proxy</strong> — same interface, controls access (lazy-load/cache/auth/log). "Gatekeeper."</li>
+        <li>Adapter/Decorator/Proxy all wrap <em>one</em> object; Facade wraps <em>many</em>; Composite wraps a whole <em>tree</em> of them.</li>
+      </ul>
+    </div>
+
+    <h2 id="interview-questions">Common Interview Questions</h2>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: Adapter vs Facade — both simplify usage of another class, what's the difference?</div>
+      <p>Adapter wraps <strong>one</strong> incompatible object to make it match an interface the client already expects — it's about interface translation. Facade wraps <strong>many</strong> classes in a subsystem to expose one simplified interface for convenience — it's about hiding orchestration complexity, not translating a mismatched interface.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: Decorator vs Proxy — both wrap one object with the same interface, what's different?</div>
+      <p>Decorator's whole purpose is to <strong>add new behavior/responsibility</strong> to the wrapped object (e.g. adding milk to coffee). Proxy's purpose is to <strong>control access</strong> to the wrapped object without changing what it fundamentally does (lazy-loading, permission checks, caching) — the underlying operation's result is the same, just gated or optimized.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: How is Composite different from a plain list of objects?</div>
+      <p>A plain list just stores items — calling code still has to know how to handle a nested list vs a single item. Composite makes the container (<code>Folder</code>) implement the <strong>same interface</strong> as the individual item (<code>File</code>), so client code can call <code>get_size()</code> on either without ever checking "is this a leaf or a group?"</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: Give an example where you'd chain multiple Decorators together.</div>
+      <p>Web middleware/logging pipelines: wrapping a request handler with a <code>LoggingDecorator</code>, then an <code>AuthDecorator</code>, then a <code>RateLimitDecorator</code> — each adds one responsibility while preserving the same "handle request" interface, and they can be composed in any order.</p>
+    </div>
+
+    <footer class="page-footer">Structural Design Patterns · LLD Revision Notes</footer>
+  </main>
+
+  <aside class="toc">
+    <div class="toc-title">On this page</div>
+    <ul id="toc-list"></ul>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

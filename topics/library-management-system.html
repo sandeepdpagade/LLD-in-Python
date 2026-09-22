@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Library Management System — LLD Revision Notes</title>
+<link rel="stylesheet" href="../css/style.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+<style>
+  .step-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 42px; height: 42px; border-radius: 10px;
+    background: var(--accent-soft); color: var(--accent);
+    font-weight: 800; font-size: 1.05rem; margin-right: 0.6rem; vertical-align: middle;
+  }
+</style>
+</head>
+<body data-page="library" data-root="../">
+
+<header class="topbar">
+  <button id="menu-toggle" class="menu-toggle" aria-label="Toggle menu">☰</button>
+  <div class="brand"><a href="../index.html" style="color:inherit;display:flex;align-items:center;gap:0.5rem;"><span class="logo">LLD</span> LLD in Python</a></div>
+  <div class="controls">
+    <a class="github-link" href="https://github.com/sandeepdpagade/LLD-in-Python" target="_blank" rel="noopener" aria-label="View source on GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span class="github-label">GitHub</span>
+    </a>
+    <button id="theme-toggle" class="theme-toggle">🌙 Dark</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <nav id="sidebar-nav"></nav>
+  </aside>
+
+  <main class="content">
+    <h1>Library Management System</h1>
+    <p class="subtitle">The classic domain from the UML page, taken all the way to a runnable design — and the modeling insight that trips people up most: a book title is not a book copy.</p>
+
+    <div class="lead-badges">
+      <span class="pill">📚 Practice Problem</span>
+      <span class="pill">⏱ ~20 min read</span>
+      <span class="pill">🎯 Catalog vs physical item modeling</span>
+    </div>
+
+    <h2 id="problem-statement"><span class="step-badge">1</span>Problem Statement</h2>
+    <p>Design a library system that supports:</p>
+    <ul>
+      <li>A catalog of books, where each title may have multiple physical copies.</li>
+      <li>Members borrowing an available copy and returning it later.</li>
+      <li>Calculating a late fee if a copy is returned after its due date.</li>
+    </ul>
+
+    <h2 id="entities"><span class="step-badge">2</span>Identifying Core Entities</h2>
+    <table>
+      <tr><th>Entity</th><th>Responsibility</th></tr>
+      <tr><td><code>Book</code></td><td>Catalog metadata: title, author, ISBN — <strong>not</strong> a physical, borrowable object</td></tr>
+      <tr><td><code>BookCopy</code></td><td>One physical copy of a <code>Book</code>, with its own borrow status</td></tr>
+      <tr><td><code>Member</code></td><td>A library user, tracking what they currently have borrowed</td></tr>
+      <tr><td><code>Loan</code></td><td>One borrow record: which copy, which member, issue/due/return dates</td></tr>
+      <tr><td><code>FineStrategy</code></td><td>Calculates the late fee for a completed loan</td></tr>
+      <tr><td><code>Library</code></td><td>The single entry point — catalog, active loans, borrow/return operations</td></tr>
+    </table>
+
+    <div class="callout pitfall">
+      <div class="callout-title">🚨 The modeling insight this problem is testing</div>
+      <p>A library owning 3 physical copies of "Clean Code" is <strong>one <code>Book</code> and three <code>BookCopy</code> objects</strong> — not three separate <code>Book</code>s. Get this wrong and your design can't answer basic questions like "how many copies of this title are currently available?" without a mess of duplicate/inconsistent metadata.</p>
+    </div>
+
+    <h2 id="design-decisions"><span class="step-badge">3</span>Design Decisions &amp; Patterns Used</h2>
+    <table>
+      <tr><th>Decision</th><th>Pattern</th><th>Why</th></tr>
+      <tr><td>Catalog metadata (<code>Book</code>) is separate from a borrowable unit (<code>BookCopy</code>)</td><td>—</td><td>Matches reality exactly: metadata is shared, availability is per-copy</td></tr>
+      <tr><td>Late fee calculation is a separate, injectable object</td><td><strong>Strategy</strong></td><td>Switching from a flat daily rate to a tiered rate is a new class, not a rewrite of <code>return_book</code></td></tr>
+      <tr><td>One <code>Library</code> instance owns the whole catalog and active loans</td><td><strong>Singleton</strong></td><td>A single source of truth for what's currently borrowed (per branch — see follow-ups)</td></tr>
+    </table>
+
+    <h2 id="implementation"><span class="step-badge">4</span>Implementation</h2>
+
+    <h3>Catalog: Book vs BookCopy</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from enum import Enum
+from datetime import datetime, timedelta
+from abc import ABC, abstractmethod
+
+class CopyStatus(Enum):
+    AVAILABLE = "available"
+    BORROWED = "borrowed"
+
+class Book:                              # catalog metadata — one per title
+    def __init__(self, isbn: str, title: str, author: str):
+        self.isbn = isbn
+        self.title = title
+        self.author = author
+
+class BookCopy:                          # one physical copy — many per Book
+    def __init__(self, copy_id: str, book: Book):
+        self.copy_id = copy_id
+        self.book = book
+        self.status = CopyStatus.AVAILABLE
+
+class Member:
+    def __init__(self, member_id: str, name: str):
+        self.member_id = member_id
+        self.name = name
+        self.borrowed_copies: list[BookCopy] = []</code></pre>
+    </div>
+
+    <h3>Loan &amp; fine strategy</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Loan:
+    LOAN_PERIOD_DAYS = 14
+
+    def __init__(self, copy: BookCopy, member: Member):
+        self.copy = copy
+        self.member = member
+        self.issue_date = datetime.now()
+        self.due_date = self.issue_date + timedelta(days=self.LOAN_PERIOD_DAYS)
+        self.return_date = None
+
+class FineStrategy(ABC):
+    @abstractmethod
+    def calculate(self, loan: Loan) -> float:
+        pass
+
+class DailyFineStrategy(FineStrategy):
+    RATE_PER_DAY = 5
+
+    def calculate(self, loan):
+        if not loan.return_date or loan.return_date &lt;= loan.due_date:
+            return 0.0
+        late_days = (loan.return_date - loan.due_date).days
+        return late_days * self.RATE_PER_DAY</code></pre>
+    </div>
+
+    <h3>Library (Singleton)</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Library:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self):
+        if getattr(self, "_initialized", False):
+            return
+        self.copies: list[BookCopy] = []
+        self.loans: dict[str, Loan] = {}          # copy_id -> active Loan
+        self.fine_strategy: FineStrategy = DailyFineStrategy()
+        self._initialized = True
+
+    def add_copy(self, copy: BookCopy):
+        self.copies.append(copy)
+
+    def find_available_copy(self, isbn: str) -> BookCopy | None:
+        for copy in self.copies:
+            if copy.book.isbn == isbn and copy.status == CopyStatus.AVAILABLE:
+                return copy
+        return None
+
+    def borrow_book(self, isbn: str, member: Member) -> Loan:
+        copy = self.find_available_copy(isbn)
+        if not copy:
+            raise Exception("No available copy for this book")
+        copy.status = CopyStatus.BORROWED
+        loan = Loan(copy, member)
+        self.loans[copy.copy_id] = loan
+        member.borrowed_copies.append(copy)
+        print(f"{member.name} borrowed '{copy.book.title}', due {loan.due_date.date()}")
+        return loan
+
+    def return_book(self, copy: BookCopy) -> float:
+        loan = self.loans.pop(copy.copy_id)
+        loan.return_date = datetime.now()
+        copy.status = CopyStatus.AVAILABLE
+        loan.member.borrowed_copies.remove(copy)
+        fine = self.fine_strategy.calculate(loan)
+        print(f"Returned '{copy.book.title}'. Fine: {fine}")
+        return fine</code></pre>
+    </div>
+
+    <h3>Putting it together</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">book = Book("978-0132350884", "Clean Code", "Robert C. Martin")
+library = Library()
+library.add_copy(BookCopy("C1", book))
+library.add_copy(BookCopy("C2", book))     # a second physical copy, same Book
+
+alice = Member("M1", "Alice")
+loan = library.borrow_book(book.isbn, alice)     # Alice borrowed 'Clean Code', due ...
+
+fine = library.return_book(loan.copy)             # Returned 'Clean Code'. Fine: 0.0</code></pre>
+    </div>
+
+    <h2 id="extending">5. Extending the Design (common follow-ups)</h2>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "What happens when all copies of a book are borrowed?"</div>
+      <p>Add a reservation queue per <code>Book</code>. When a copy is returned, check for waiting members and notify the first one — a natural fit for the <strong>Observer</strong> pattern (the <code>Book</code> or <code>Library</code> notifies waiting members instead of them polling).</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "How would you support multiple library branches?"</div>
+      <p>This is exactly why <code>Library</code> being a Singleton is a <em>design choice tied to the requirement</em>, not a universal rule — with multiple branches, each branch gets its own <code>Library</code> instance (no longer a Singleton), and a higher-level <code>LibrarySystem</code> could route requests to the correct branch or search across all of them.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "How would you search by author or genre efficiently?"</div>
+      <p>Don't linear-scan <code>self.copies</code> for this — maintain secondary indexes (e.g. <code>dict[author, list[Book]]</code>) updated whenever a book is added to the catalog, or delegate to a dedicated <code>SearchService</code> if the catalog grows large enough to warrant it (SRP: cataloging vs. searching are different concerns).</p>
+    </div>
+
+    <div class="revision-box">
+      <h3>📌 Quick Revision — Cheat Sheet</h3>
+      <ul>
+        <li><strong>Entities:</strong> Book, BookCopy, Member, Loan, FineStrategy, Library.</li>
+        <li><strong>Key modeling insight:</strong> Book (catalog metadata) ≠ BookCopy (physical, borrowable unit).</li>
+        <li><strong>Strategy:</strong> fine calculation is swappable without touching borrow/return logic.</li>
+        <li>Multi-branch support is the natural signal that Singleton was a requirement-specific choice, not a universal default.</li>
+      </ul>
+    </div>
+
+    <footer class="page-footer">Library Management System · LLD Revision Notes</footer>
+  </main>
+
+  <aside class="toc">
+    <div class="toc-title">On this page</div>
+    <ul id="toc-list"></ul>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

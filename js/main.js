@@ -12,15 +12,23 @@ const TOPICS = [
   {
     section: "Design Patterns",
     items: [
-      { title: "Creational Patterns", href: "#", id: "creational", status: "soon" },
-      { title: "Structural Patterns", href: "#", id: "structural", status: "soon" },
-      { title: "Behavioral Patterns", href: "#", id: "behavioral", status: "soon" },
+      { title: "Creational Patterns", href: "topics/creational-patterns.html", id: "creational", status: "done" },
+      { title: "Structural Patterns", href: "topics/structural-patterns.html", id: "structural", status: "done" },
+      { title: "Behavioral Patterns", href: "topics/behavioral-patterns.html", id: "behavioral", status: "done" },
     ],
   },
   {
     section: "Practice",
     items: [
-      { title: "LLD Problems", href: "#", id: "problems", status: "soon" },
+      { title: "Parking Lot System", href: "topics/parking-lot-system.html", id: "parking-lot", status: "done" },
+      { title: "Elevator System", href: "topics/elevator-system.html", id: "elevator", status: "done" },
+      { title: "Splitwise", href: "topics/splitwise.html", id: "splitwise", status: "done" },
+      { title: "BookMyShow", href: "topics/bookmyshow.html", id: "bookmyshow", status: "done" },
+      { title: "Tic-Tac-Toe", href: "topics/tic-tac-toe.html", id: "tictactoe", status: "done" },
+      { title: "Vending Machine", href: "topics/vending-machine.html", id: "vending-machine", status: "done" },
+      { title: "Cab Booking System", href: "topics/cab-booking-system.html", id: "cab-booking", status: "done" },
+      { title: "Library Management", href: "topics/library-management-system.html", id: "library", status: "done" },
+      { title: "LRU Cache", href: "topics/lru-cache.html", id: "lru-cache", status: "done" },
     ],
   },
 ];

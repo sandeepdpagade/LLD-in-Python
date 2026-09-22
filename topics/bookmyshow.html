@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BookMyShow — LLD Revision Notes</title>
+<link rel="stylesheet" href="../css/style.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+<style>
+  .step-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 42px; height: 42px; border-radius: 10px;
+    background: var(--accent-soft); color: var(--accent);
+    font-weight: 800; font-size: 1.05rem; margin-right: 0.6rem; vertical-align: middle;
+  }
+</style>
+</head>
+<body data-page="bookmyshow" data-root="../">
+
+<header class="topbar">
+  <button id="menu-toggle" class="menu-toggle" aria-label="Toggle menu">☰</button>
+  <div class="brand"><a href="../index.html" style="color:inherit;display:flex;align-items:center;gap:0.5rem;"><span class="logo">LLD</span> LLD in Python</a></div>
+  <div class="controls">
+    <a class="github-link" href="https://github.com/sandeepdpagade/LLD-in-Python" target="_blank" rel="noopener" aria-label="View source on GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span class="github-label">GitHub</span>
+    </a>
+    <button id="theme-toggle" class="theme-toggle">🌙 Dark</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <nav id="sidebar-nav"></nav>
+  </aside>
+
+  <main class="content">
+    <h1>BookMyShow (Movie Ticket Booking)</h1>
+    <p class="subtitle">The interview question that's really about one thing: how do you stop two people from booking the same seat at the same time?</p>
+
+    <div class="lead-badges">
+      <span class="pill">🎬 Practice Problem</span>
+      <span class="pill">⏱ ~22 min read</span>
+      <span class="pill">🎯 Concurrency-safe State design</span>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-title">💡 What this problem is really testing</div>
+      <p>Anyone can model <code>Movie</code>, <code>Theatre</code>, and <code>Seat</code> classes. What separates a strong answer is handling the <strong>race condition</strong>: two users selecting the same seat within milliseconds of each other. If you don't bring this up unprompted, expect it as a direct follow-up.</p>
+    </div>
+
+    <h2 id="problem-statement"><span class="step-badge">1</span>Problem Statement</h2>
+    <p>Design a movie ticket booking system that supports:</p>
+    <ul>
+      <li>Browsing shows (a movie playing on a specific screen at a specific time).</li>
+      <li>Selecting one or more seats for a show and holding them temporarily during checkout.</li>
+      <li>Confirming the booking after payment, or releasing the hold if checkout doesn't complete.</li>
+      <li>Guaranteeing a seat is never double-booked, even under concurrent requests.</li>
+    </ul>
+
+    <h2 id="requirements"><span class="step-badge">2</span>Clarifying Requirements</h2>
+    <table>
+      <tr><th>Functional</th><th>Non-functional</th></tr>
+      <tr><td>Lock selected seats for the duration of checkout</td><td>No two users can ever hold/confirm the same seat</td></tr>
+      <tr><td>Auto-release a hold if payment isn't completed in time</td><td>Seat pricing should vary by seat type without touching booking logic</td></tr>
+      <tr><td>Confirm booking atomically across multiple selected seats</td><td>Partial failures (one seat in a multi-seat request unavailable) must roll back cleanly</td></tr>
+    </table>
+
+    <h2 id="entities"><span class="step-badge">3</span>Identifying Core Entities</h2>
+    <table>
+      <tr><th>Entity</th><th>Responsibility</th></tr>
+      <tr><td><code>Seat</code></td><td>Tracks its own type and status (available/locked/booked) — a small state machine</td></tr>
+      <tr><td><code>Show</code></td><td>A movie at a specific time, owning the seat map for that screening</td></tr>
+      <tr><td><code>Booking</code></td><td>A user's attempt to reserve a set of seats for a show</td></tr>
+      <tr><td><code>BookingManager</code></td><td>The single entry point that locks, confirms, and rolls back bookings</td></tr>
+    </table>
+
+    <h2 id="design-decisions"><span class="step-badge">4</span>Design Decisions &amp; Patterns Used</h2>
+    <table>
+      <tr><th>Decision</th><th>Pattern</th><th>Why</th></tr>
+      <tr><td>A seat moves through AVAILABLE → LOCKED → BOOKED (or back to AVAILABLE)</td><td><strong>State</strong> (via enum + guarded transitions)</td><td>Makes illegal transitions (booking an already-locked seat) impossible by construction</td></tr>
+      <tr><td>Each <code>Seat</code> guards its own status flip with a lock</td><td>—</td><td>The actual fix for the race condition: the check-then-set has to be atomic <em>per seat</em></td></tr>
+      <tr><td>One <code>BookingManager</code> coordinates all bookings</td><td><strong>Singleton</strong></td><td>A single source of truth for what's been booked, building-wide</td></tr>
+      <tr><td>Locking multiple seats either fully succeeds or fully rolls back</td><td>—</td><td>Prevents a user from ending up with 1 of 2 requested seats stuck in limbo</td></tr>
+    </table>
+
+    <h2 id="implementation"><span class="step-badge">5</span>Implementation</h2>
+
+    <h3>Seat — a small, thread-safe state machine</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from enum import Enum
+import threading
+import time
+
+class SeatType(Enum):
+    SILVER = 100
+    GOLD = 200
+    PREMIUM = 350
+
+class SeatStatus(Enum):
+    AVAILABLE = "available"
+    LOCKED = "locked"
+    BOOKED = "booked"
+
+class Seat:
+    def __init__(self, seat_id: str, seat_type: SeatType):
+        self.seat_id = seat_id
+        self.seat_type = seat_type
+        self.status = SeatStatus.AVAILABLE
+        self.lock_time = None
+        self._mutex = threading.Lock()          # guards the check-then-set below
+
+    def try_lock(self) -> bool:
+        with self._mutex:                        # atomic: no other thread can interleave here
+            if self.status == SeatStatus.AVAILABLE:
+                self.status = SeatStatus.LOCKED
+                self.lock_time = time.time()
+                return True
+            return False
+
+    def confirm(self):
+        with self._mutex:
+            self.status = SeatStatus.BOOKED
+
+    def release(self):
+        with self._mutex:
+            self.status = SeatStatus.AVAILABLE
+            self.lock_time = None</code></pre>
+    </div>
+
+    <div class="callout pitfall">
+      <div class="callout-title">🚨 This is the crux of the whole problem</div>
+      <p>Without the <code>threading.Lock</code>, two threads could both read <code>status == AVAILABLE</code> as true <em>before</em> either one sets it to <code>LOCKED</code> — both would then believe they'd successfully claimed the seat. The lock makes "check status, then set status" one atomic operation instead of two separate steps a second thread could slip between.</p>
+    </div>
+
+    <h3>Show &amp; Booking</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Show:
+    def __init__(self, show_id: str, movie_name: str, seats: list[Seat]):
+        self.show_id = show_id
+        self.movie_name = movie_name
+        self.seats = {s.seat_id: s for s in seats}
+
+class Booking:
+    def __init__(self, booking_id: str, show: Show, seat_ids: list[str], user_id: str):
+        self.booking_id = booking_id
+        self.show = show
+        self.seat_ids = seat_ids
+        self.user_id = user_id
+        self.confirmed = False</code></pre>
+    </div>
+
+    <h3>BookingManager (Singleton, with rollback)</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class BookingManager:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self):
+        if getattr(self, "_initialized", False):
+            return
+        self.bookings: dict[str, Booking] = {}
+        self._initialized = True
+
+    def hold_seats(self, show: Show, seat_ids: list[str], user_id: str) -> Booking:
+        locked = []
+        for sid in seat_ids:
+            seat = show.seats[sid]
+            if seat.try_lock():
+                locked.append(seat)
+            else:
+                for s in locked:                # roll back the partial lock
+                    s.release()
+                raise Exception(f"Seat {sid} is not available")
+
+        booking_id = f"BKG-{len(self.bookings) + 1}"
+        booking = Booking(booking_id, show, seat_ids, user_id)
+        self.bookings[booking_id] = booking
+        return booking
+
+    def confirm_booking(self, booking: Booking):
+        for sid in booking.seat_ids:
+            booking.show.seats[sid].confirm()
+        booking.confirmed = True
+        print(f"Booking {booking.booking_id} confirmed for {booking.user_id}")
+
+    def cancel_hold(self, booking: Booking):
+        for sid in booking.seat_ids:
+            booking.show.seats[sid].release()
+        del self.bookings[booking.booking_id]</code></pre>
+    </div>
+
+    <h3>Putting it together</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">seats = [Seat(f"A{i}", SeatType.GOLD) for i in range(1, 6)]
+show = Show("S1", "Inception", seats)
+
+manager = BookingManager()
+booking = manager.hold_seats(show, ["A1", "A2"], user_id="user_42")
+manager.confirm_booking(booking)   # Booking BKG-1 confirmed for user_42
+
+# A second user racing for the same seat fails cleanly, no partial state:
+try:
+    manager.hold_seats(show, ["A1", "A3"], user_id="user_99")
+except Exception as e:
+    print(e)   # Seat A1 is not available -> A3 is auto-released via rollback, not left locked</code></pre>
+    </div>
+
+    <h2 id="extending">6. Extending the Design (common follow-ups)</h2>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "What happens if a user locks seats but never completes payment?"</div>
+      <p>Add a <code>lock_time</code>-based expiry (already tracked above): a background job periodically scans for seats stuck in <code>LOCKED</code> longer than, say, 5 minutes and calls <code>release()</code> on them. This is the same "TTL cleanup" idea you'd use for any temporary hold.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "How would seat pricing vary by seat type or day of week?"</div>
+      <p><strong>Strategy pattern</strong> — introduce a <code>PricingStrategy</code> (as in the Parking Lot and Creational Patterns pages) that computes the final price from <code>SeatType</code> and the show's date/time, injected into <code>BookingManager</code> without changing its booking logic at all.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "Why lock per-seat instead of one global lock for the whole show?"</div>
+      <p>A global lock would serialize <em>all</em> bookings for a show, even ones for completely different seats — a huge throughput bottleneck for a popular showtime. Per-seat locks only create contention when two people genuinely want the <em>same</em> seat, which is the only case that actually needs to be serialized.</p>
+    </div>
+
+    <div class="revision-box">
+      <h3>📌 Quick Revision — Cheat Sheet</h3>
+      <ul>
+        <li><strong>Entities:</strong> Seat, Show, Booking, BookingManager.</li>
+        <li><strong>State:</strong> AVAILABLE → LOCKED → BOOKED, guarded transitions prevent illegal states.</li>
+        <li><strong>The core fix:</strong> a per-seat <code>threading.Lock</code> around "check then set," not a global lock.</li>
+        <li><strong>Atomicity:</strong> multi-seat holds either fully succeed or fully roll back — no seat left stuck in limbo.</li>
+        <li>Classic follow-ups: lock timeout/expiry, dynamic pricing (Strategy), per-seat vs global locking trade-off.</li>
+      </ul>
+    </div>
+
+    <footer class="page-footer">BookMyShow · LLD Revision Notes</footer>
+  </main>
+
+  <aside class="toc">
+    <div class="toc-title">On this page</div>
+    <ul id="toc-list"></ul>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

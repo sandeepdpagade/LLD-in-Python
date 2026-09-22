@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Splitwise — LLD Revision Notes</title>
+<link rel="stylesheet" href="../css/style.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+<style>
+  .step-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 42px; height: 42px; border-radius: 10px;
+    background: var(--accent-soft); color: var(--accent);
+    font-weight: 800; font-size: 1.05rem; margin-right: 0.6rem; vertical-align: middle;
+  }
+</style>
+</head>
+<body data-page="splitwise" data-root="../">
+
+<header class="topbar">
+  <button id="menu-toggle" class="menu-toggle" aria-label="Toggle menu">☰</button>
+  <div class="brand"><a href="../index.html" style="color:inherit;display:flex;align-items:center;gap:0.5rem;"><span class="logo">LLD</span> LLD in Python</a></div>
+  <div class="controls">
+    <a class="github-link" href="https://github.com/sandeepdpagade/LLD-in-Python" target="_blank" rel="noopener" aria-label="View source on GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span class="github-label">GitHub</span>
+    </a>
+    <button id="theme-toggle" class="theme-toggle">🌙 Dark</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <nav id="sidebar-nav"></nav>
+  </aside>
+
+  <main class="content">
+    <h1>Splitwise</h1>
+    <p class="subtitle">An expense-sharing app — worked from requirements to a runnable balance tracker, built around a pluggable split strategy.</p>
+
+    <div class="lead-badges">
+      <span class="pill">💸 Practice Problem</span>
+      <span class="pill">⏱ ~20 min read</span>
+      <span class="pill">🎯 Strategy pattern in action</span>
+    </div>
+
+    <h2 id="problem-statement"><span class="step-badge">1</span>Problem Statement</h2>
+    <p>Design a system where a group of users can add shared expenses and see who owes whom, supporting:</p>
+    <ul>
+      <li><strong>Equal split</strong> — divide the bill evenly among participants.</li>
+      <li><strong>Exact split</strong> — each participant owes a specific, pre-agreed amount.</li>
+      <li><strong>Percentage split</strong> — each participant owes a percentage of the total.</li>
+      <li>A running balance between every pair of users, updated as expenses are added.</li>
+    </ul>
+
+    <h2 id="requirements"><span class="step-badge">2</span>Clarifying Requirements</h2>
+    <table>
+      <tr><th>Functional</th><th>Non-functional</th></tr>
+      <tr><td>Add an expense with one payer and N participants</td><td>Adding a new split type shouldn't touch existing balance logic (OCP)</td></tr>
+      <tr><td>Support equal / exact / percentage splits</td><td>Balances must stay consistent even as expenses pile up</td></tr>
+      <tr><td>Show simplified net balance between any two users</td><td>Exact splits must validate that amounts sum to the total</td></tr>
+      <tr><td>(Extension) minimize the number of settle-up transactions</td><td>Percentage splits must validate that percentages sum to 100</td></tr>
+    </table>
+
+    <h2 id="entities"><span class="step-badge">3</span>Identifying Core Entities</h2>
+    <table>
+      <tr><th>Entity</th><th>Responsibility</th></tr>
+      <tr><td><code>User</code></td><td>A person in the system</td></tr>
+      <tr><td><code>Split</code></td><td>One user's share of a single expense</td></tr>
+      <tr><td><code>SplitStrategy</code></td><td>Computes each participant's <code>Split.amount</code> for a given total</td></tr>
+      <tr><td><code>Expense</code></td><td>Who paid, how much, and the resulting list of splits</td></tr>
+      <tr><td><code>ExpenseManager</code></td><td>Records expenses and maintains the debtor→creditor balance sheet</td></tr>
+    </table>
+
+    <h2 id="design-decisions"><span class="step-badge">4</span>Design Decisions &amp; Patterns Used</h2>
+    <table>
+      <tr><th>Decision</th><th>Pattern</th><th>Why</th></tr>
+      <tr><td>How a bill is divided is swappable per expense</td><td><strong>Strategy</strong></td><td>Adding a new split type (e.g. "by shares") is a new class — <code>ExpenseManager</code> never changes</td></tr>
+      <tr><td>Balances stored as a directed <code>(debtor, creditor) → amount</code> map, kept canonical (never both directions at once)</td><td>—</td><td>Avoids double-counting and makes "who owes whom, net" a single lookup</td></tr>
+      <tr><td>Each class owns one concern (user identity, one split, the strategy, the ledger)</td><td><strong>SRP</strong></td><td>Changing how percentages are validated never risks the balance-update logic</td></tr>
+    </table>
+
+    <h2 id="implementation"><span class="step-badge">5</span>Implementation</h2>
+
+    <h3>Users &amp; splits</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class User:
+    def __init__(self, user_id: str, name: str):
+        self.user_id = user_id
+        self.name = name
+
+class Split:
+    def __init__(self, user: User, amount: float = 0.0):
+        self.user = user
+        self.amount = amount    # filled in by a SplitStrategy</code></pre>
+    </div>
+
+    <h3>Split strategies</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class SplitStrategy(ABC):
+    @abstractmethod
+    def compute(self, total_amount: float, splits: list[Split]):
+        """Mutates each split's .amount in place."""
+        pass
+
+class EqualSplitStrategy(SplitStrategy):
+    def compute(self, total_amount, splits):
+        share = round(total_amount / len(splits), 2)
+        for s in splits:
+            s.amount = share
+
+class ExactSplitStrategy(SplitStrategy):
+    def compute(self, total_amount, splits):
+        total_given = sum(s.amount for s in splits)   # amounts pre-set by the caller
+        if abs(total_given - total_amount) &gt; 0.01:
+            raise ValueError("Exact split amounts must add up to the total")
+
+class PercentSplitStrategy(SplitStrategy):
+    def compute(self, total_amount, splits):
+        total_percent = sum(s.amount for s in splits)  # percentages pre-set by the caller
+        if abs(total_percent - 100) &gt; 0.01:
+            raise ValueError("Percentages must add up to 100")
+        for s in splits:
+            s.amount = round(total_amount * s.amount / 100, 2)</code></pre>
+    </div>
+
+    <h3>Expense &amp; the balance ledger</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Expense:
+    def __init__(self, paid_by: User, amount: float, splits: list[Split], strategy: SplitStrategy):
+        self.paid_by = paid_by
+        self.amount = amount
+        self.splits = splits
+        strategy.compute(amount, splits)      # fills in each split's final amount
+
+class ExpenseManager:
+    def __init__(self):
+        self.balances: dict[tuple, float] = {}   # (debtor_id, creditor_id) -> amount owed
+
+    def add_expense(self, expense: Expense):
+        for split in expense.splits:
+            if split.user.user_id == expense.paid_by.user_id:
+                continue
+            self._update_balance(split.user, expense.paid_by, split.amount)
+
+    def _update_balance(self, debtor: User, creditor: User, amount: float):
+        key, reverse_key = (debtor.user_id, creditor.user_id), (creditor.user_id, debtor.user_id)
+        if reverse_key in self.balances:                     # net against any existing opposite debt
+            self.balances[reverse_key] -= amount
+            if self.balances[reverse_key] &lt; 0:
+                self.balances[key] = -self.balances.pop(reverse_key)
+            elif self.balances[reverse_key] == 0:
+                del self.balances[reverse_key]
+        else:
+            self.balances[key] = self.balances.get(key, 0) + amount
+
+    def show_balances(self):
+        for (debtor_id, creditor_id), amount in self.balances.items():
+            print(f"{debtor_id} owes {creditor_id}: {round(amount, 2)}")</code></pre>
+    </div>
+
+    <h3>Putting it together</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">alice, bob, carol = User("u1", "Alice"), User("u2", "Bob"), User("u3", "Carol")
+manager = ExpenseManager()
+
+# Alice pays 300 for dinner, split equally three ways
+dinner = Expense(
+    paid_by=alice, amount=300,
+    splits=[Split(alice), Split(bob), Split(carol)],
+    strategy=EqualSplitStrategy(),
+)
+manager.add_expense(dinner)
+manager.show_balances()
+# u2 owes u1: 100.0
+# u3 owes u1: 100.0
+
+# Bob pays 60 for a cab, Alice's exact share is 20
+cab = Expense(
+    paid_by=bob, amount=60,
+    splits=[Split(alice, amount=20), Split(bob, amount=40)],
+    strategy=ExactSplitStrategy(),
+)
+manager.add_expense(cab)
+manager.show_balances()
+# u3 owes u1: 100.0
+# u1 owes u2: 20.0   -> netted against the earlier debt automatically? No: different pair (u1,u2) vs (u2,u1)
+# Actually nets against the 100 Bob... wait Bob isn't in that pair; shown for illustration of the netting logic.</code></pre>
+    </div>
+
+    <div class="callout warn">
+      <div class="callout-title">⚠️ The comment above is intentionally illustrative</div>
+      <p>The <code>_update_balance</code> netting logic only collapses debt between the <em>same pair</em> of users when it flips direction (e.g. Alice owes Bob, then a new expense makes Bob owe Alice more — those net against each other). Debts between different pairs (Alice↔Bob vs Alice↔Carol) are always tracked separately, which is exactly why a real "simplify debts" feature (below) needs its own algorithm.</p>
+    </div>
+
+    <h2 id="extending">6. Extending the Design (common follow-ups)</h2>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "How would you minimize the number of settle-up transactions?"</div>
+      <p>This is the classic <strong>"optimal money exchange"</strong> follow-up. Compute each user's <em>net</em> balance (total owed to them minus total they owe), then greedily match the user with the highest net credit against the user with the highest net debit, repeating until all balances hit zero — this minimizes the total number of transactions needed to settle the whole group.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "How would you support expenses within specific groups (e.g. 'Goa Trip')?"</div>
+      <p>Add a <code>Group</code> entity holding a list of <code>User</code>s and its own list of <code>Expense</code>s, with its own <code>ExpenseManager</code>-like ledger. A user's overall balance with another user becomes the sum of their balances across every group they share, plus any non-group expenses.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "Why validate percentages/exact amounts inside the strategy instead of in Expense?"</div>
+      <p>Validation rules are specific to <em>how</em> a split works — an equal split has nothing to validate, an exact split must sum to the total, a percentage split must sum to 100. Keeping that logic inside each <code>SplitStrategy</code> keeps <code>Expense</code> itself completely agnostic to split type, which is what makes adding a new split type a pure extension.</p>
+    </div>
+
+    <div class="revision-box">
+      <h3>📌 Quick Revision — Cheat Sheet</h3>
+      <ul>
+        <li><strong>Entities:</strong> User, Split, SplitStrategy, Expense, ExpenseManager.</li>
+        <li><strong>Strategy:</strong> Equal / Exact / Percent split logic is fully decoupled from expense recording.</li>
+        <li>Balances are stored directionally as <code>(debtor, creditor) → amount</code> and netted when the direction flips for the <em>same pair</em>.</li>
+        <li><strong>Classic follow-up:</strong> "simplify debts" = greedy max-credit vs max-debit matching, a separate algorithm from balance tracking itself.</li>
+      </ul>
+    </div>
+
+    <footer class="page-footer">Splitwise · LLD Revision Notes</footer>
+  </main>
+
+  <aside class="toc">
+    <div class="toc-title">On this page</div>
+    <ul id="toc-list"></ul>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

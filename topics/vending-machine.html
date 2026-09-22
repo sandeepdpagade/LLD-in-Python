@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vending Machine — LLD Revision Notes</title>
+<link rel="stylesheet" href="../css/style.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+<style>
+  .step-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 42px; height: 42px; border-radius: 10px;
+    background: var(--accent-soft); color: var(--accent);
+    font-weight: 800; font-size: 1.05rem; margin-right: 0.6rem; vertical-align: middle;
+  }
+</style>
+</head>
+<body data-page="vending-machine" data-root="../">
+
+<header class="topbar">
+  <button id="menu-toggle" class="menu-toggle" aria-label="Toggle menu">☰</button>
+  <div class="brand"><a href="../index.html" style="color:inherit;display:flex;align-items:center;gap:0.5rem;"><span class="logo">LLD</span> LLD in Python</a></div>
+  <div class="controls">
+    <a class="github-link" href="https://github.com/sandeepdpagade/LLD-in-Python" target="_blank" rel="noopener" aria-label="View source on GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span class="github-label">GitHub</span>
+    </a>
+    <button id="theme-toggle" class="theme-toggle">🌙 Dark</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <nav id="sidebar-nav"></nav>
+  </aside>
+
+  <main class="content">
+    <h1>Vending Machine</h1>
+    <p class="subtitle">The canonical State-pattern interview question, taken all the way to a full working design with inventory and change.</p>
+
+    <div class="lead-badges">
+      <span class="pill">🥤 Practice Problem</span>
+      <span class="pill">⏱ ~20 min read</span>
+      <span class="pill">🎯 State pattern, fully worked</span>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-title">💡 Why this is the textbook State example</div>
+      <p>You met a stripped-down version of this on the Behavioral Patterns page. Here it's taken to its natural conclusion: inventory, real coin values, change calculation, and a third state (<code>Dispensing</code>) — enough depth for an actual 45-minute interview round.</p>
+    </div>
+
+    <h2 id="problem-statement"><span class="step-badge">1</span>Problem Statement</h2>
+    <p>Design a vending machine that supports:</p>
+    <ul>
+      <li>Inserting coins of different denominations.</li>
+      <li>Selecting a product by its slot code.</li>
+      <li>Dispensing the product and returning change, only once enough money has been inserted.</li>
+      <li>Refusing to dispense out-of-stock or insufficiently-paid-for items.</li>
+    </ul>
+
+    <h2 id="entities"><span class="step-badge">2</span>Identifying Core Entities</h2>
+    <table>
+      <tr><th>Entity</th><th>Responsibility</th></tr>
+      <tr><td><code>Coin</code></td><td>Enum of accepted denominations and their values</td></tr>
+      <tr><td><code>Product</code></td><td>Name and price</td></tr>
+      <tr><td><code>Inventory</code></td><td>Maps slot codes to a product and remaining quantity</td></tr>
+      <tr><td><code>VendingState</code></td><td>Defines behavior for insert/select/dispense in one specific mode</td></tr>
+      <tr><td><code>VendingMachine</code></td><td>Holds the current state, balance, and inventory; delegates every action to its state</td></tr>
+    </table>
+
+    <h2 id="design-decisions"><span class="step-badge">3</span>Design Decisions &amp; Patterns Used</h2>
+    <table>
+      <tr><th>Decision</th><th>Pattern</th><th>Why</th></tr>
+      <tr><td>Behavior for insert/select/dispense differs completely by mode</td><td><strong>State</strong></td><td>No mode ever needs an <code>if machine.mode == "..."</code> check — each state class only implements what's valid for it</td></tr>
+      <tr><td>Stock tracking lives entirely in <code>Inventory</code>, not in the states</td><td><strong>SRP</strong></td><td>Restocking logic never risks touching state-transition logic</td></tr>
+    </table>
+
+    <h2 id="implementation"><span class="step-badge">4</span>Implementation</h2>
+
+    <h3>Coins, products, inventory</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from enum import Enum
+from abc import ABC, abstractmethod
+
+class Coin(Enum):
+    NICKEL = 5
+    DIME = 10
+    QUARTER = 25
+
+class Product:
+    def __init__(self, name: str, price: int):
+        self.name = name
+        self.price = price
+
+class Inventory:
+    def __init__(self):
+        self.slots: dict[str, list] = {}     # slot_code -> [Product, quantity]
+
+    def add_stock(self, slot_code: str, product: Product, quantity: int):
+        self.slots[slot_code] = [product, quantity]
+
+    def get_product(self, slot_code: str) -> Product:
+        return self.slots[slot_code][0]
+
+    def is_available(self, slot_code: str) -> bool:
+        return slot_code in self.slots and self.slots[slot_code][1] &gt; 0
+
+    def reduce_stock(self, slot_code: str):
+        self.slots[slot_code][1] -= 1</code></pre>
+    </div>
+
+    <h3>The three states</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class VendingState(ABC):
+    @abstractmethod
+    def insert_coin(self, machine, coin: Coin): pass
+    @abstractmethod
+    def select_product(self, machine, slot_code: str): pass
+    @abstractmethod
+    def dispense(self, machine): pass
+
+class IdleState(VendingState):
+    def insert_coin(self, machine, coin):
+        machine.balance += coin.value
+        machine.state = machine.has_money_state
+        print(f"Inserted {coin.name}, balance = {machine.balance}")
+
+    def select_product(self, machine, slot_code):
+        print("Insert coins first")
+
+    def dispense(self, machine):
+        print("Insert coins and select a product first")
+
+class HasMoneyState(VendingState):
+    def insert_coin(self, machine, coin):
+        machine.balance += coin.value
+        print(f"Inserted {coin.name}, balance = {machine.balance}")
+
+    def select_product(self, machine, slot_code):
+        if not machine.inventory.is_available(slot_code):
+            print("Out of stock")
+            return
+        product = machine.inventory.get_product(slot_code)
+        if machine.balance &lt; product.price:
+            print(f"Insufficient balance, need {product.price - machine.balance} more")
+            return
+        machine.selected_slot = slot_code
+        machine.state = machine.dispensing_state
+        machine.dispense()
+
+    def dispense(self, machine):
+        print("Select a product first")
+
+class DispensingState(VendingState):
+    def insert_coin(self, machine, coin):
+        print("Please wait, dispensing in progress")
+
+    def select_product(self, machine, slot_code):
+        print("Please wait, dispensing in progress")
+
+    def dispense(self, machine):
+        product = machine.inventory.get_product(machine.selected_slot)
+        machine.inventory.reduce_stock(machine.selected_slot)
+        change = machine.balance - product.price
+        print(f"Dispensing {product.name}. Change returned: {change}")
+        machine.balance = 0
+        machine.state = machine.idle_state</code></pre>
+    </div>
+
+    <h3>VendingMachine — the context</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class VendingMachine:
+    def __init__(self, inventory: Inventory):
+        self.inventory = inventory
+        self.balance = 0
+        self.selected_slot = None
+        self.idle_state = IdleState()
+        self.has_money_state = HasMoneyState()
+        self.dispensing_state = DispensingState()
+        self.state: VendingState = self.idle_state    # start state
+
+    def insert_coin(self, coin: Coin): self.state.insert_coin(self, coin)
+    def select_product(self, slot_code: str): self.state.select_product(self, slot_code)
+    def dispense(self): self.state.dispense(self)
+
+inventory = Inventory()
+inventory.add_stock("A1", Product("Coke", 35), quantity=5)
+
+vm = VendingMachine(inventory)
+vm.select_product("A1")        # Insert coins first
+vm.insert_coin(Coin.QUARTER)   # Inserted QUARTER, balance = 25
+vm.insert_coin(Coin.DIME)      # Inserted DIME, balance = 35
+vm.select_product("A1")        # Dispensing Coke. Change returned: 0</code></pre>
+    </div>
+
+    <h2 id="extending">5. Extending the Design (common follow-ups)</h2>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "How would you add a refund/cancel button?"</div>
+      <p>Add a <code>cancel(machine)</code> method to <code>VendingState</code>: in <code>HasMoneyState</code> it returns the full balance and transitions back to <code>IdleState</code>; in <code>IdleState</code> and <code>DispensingState</code> it's a no-op (nothing to refund, or too late to cancel).</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "How would you support card payments alongside coins?"</div>
+      <p>Introduce a <code>PaymentMethod</code> interface (Strategy/Adapter) with <code>CoinPayment</code> and <code>CardPayment</code> implementations. <code>HasMoneyState</code> would work against the interface's "amount received" rather than coin-specific logic, so both payment types drive the same state machine.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "Why isn't VendingMachine itself a Singleton, unlike ParkingLot?"</div>
+      <p>Because a real building can have <em>many independent physical vending machines</em>, each with its own inventory and balance — there's no single global instance to protect, unlike a parking lot's one shared physical structure. Singleton is a fit only when the real-world entity is genuinely unique; always check that before reaching for it.</p>
+    </div>
+
+    <div class="revision-box">
+      <h3>📌 Quick Revision — Cheat Sheet</h3>
+      <ul>
+        <li><strong>Entities:</strong> Coin, Product, Inventory, VendingState, VendingMachine.</li>
+        <li><strong>States:</strong> Idle → HasMoney → Dispensing → back to Idle, each with its own valid actions only.</li>
+        <li>Inventory (stock) is a separate concern from state (mode) — don't conflate the two.</li>
+        <li>Not every "system" needs a Singleton — ask whether the real-world thing is actually unique first.</li>
+      </ul>
+    </div>
+
+    <footer class="page-footer">Vending Machine · LLD Revision Notes</footer>
+  </main>
+
+  <aside class="toc">
+    <div class="toc-title">On this page</div>
+    <ul id="toc-list"></ul>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LRU Cache — LLD Revision Notes</title>
+<link rel="stylesheet" href="../css/style.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+<style>
+  .step-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 42px; height: 42px; border-radius: 10px;
+    background: var(--accent-soft); color: var(--accent);
+    font-weight: 800; font-size: 1.05rem; margin-right: 0.6rem; vertical-align: middle;
+  }
+</style>
+</head>
+<body data-page="lru-cache" data-root="../">
+
+<header class="topbar">
+  <button id="menu-toggle" class="menu-toggle" aria-label="Toggle menu">☰</button>
+  <div class="brand"><a href="../index.html" style="color:inherit;display:flex;align-items:center;gap:0.5rem;"><span class="logo">LLD</span> LLD in Python</a></div>
+  <div class="controls">
+    <a class="github-link" href="https://github.com/sandeepdpagade/LLD-in-Python" target="_blank" rel="noopener" aria-label="View source on GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span class="github-label">GitHub</span>
+    </a>
+    <button id="theme-toggle" class="theme-toggle">🌙 Dark</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <nav id="sidebar-nav"></nav>
+  </aside>
+
+  <main class="content">
+    <h1>LRU Cache</h1>
+    <p class="subtitle">The classic "machine coding" LLD question — a pure data-structure design where the only requirement that matters is the Big-O.</p>
+
+    <div class="lead-badges">
+      <span class="pill">⚡ Practice Problem</span>
+      <span class="pill">⏱ ~15 min read</span>
+      <span class="pill">🎯 O(1) get and put, from scratch</span>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-title">💡 Why this problem is different from the others</div>
+      <p>Every other problem on this page is about modeling real-world entities. This one is about picking the right <strong>data structure combination</strong>. A cache needs fast lookup by key (→ hash map) <em>and</em> fast reordering by recency (→ doubly linked list) — neither one alone gives you O(1) for both operations.</p>
+    </div>
+
+    <h2 id="problem-statement"><span class="step-badge">1</span>Problem Statement</h2>
+    <p>Design a fixed-capacity cache supporting:</p>
+    <ul>
+      <li><code>get(key)</code> — return the value, or -1 if not present, in <strong>O(1)</strong>.</li>
+      <li><code>put(key, value)</code> — insert or update a value in <strong>O(1)</strong>.</li>
+      <li>When capacity is exceeded, evict the <strong>Least Recently Used</strong> entry automatically.</li>
+    </ul>
+
+    <h2 id="design-decisions"><span class="step-badge">2</span>Design Decisions</h2>
+    <table>
+      <tr><th>Need</th><th>Data structure</th><th>Why</th></tr>
+      <tr><td>O(1) lookup by key</td><td>Hash map (<code>dict</code>)</td><td>Standard O(1) average-case key lookup</td></tr>
+      <tr><td>O(1) "move to most-recently-used"</td><td>Doubly linked list</td><td>Removing/re-inserting a node needs only pointer updates — no shifting, unlike an array/list</td></tr>
+      <tr><td>O(1) eviction of the least-recently-used entry</td><td>Tail of the same linked list</td><td>The list is kept ordered by recency, so "least recent" is always exactly the tail</td></tr>
+      <tr><td>Avoid null-checks at the list's boundaries</td><td>Dummy head + tail sentinel nodes</td><td>Every real node always has a valid <code>prev</code>/<code>next</code> to link against — no edge cases for "list is empty" or "removing the only node"</td></tr>
+    </table>
+
+    <h2 id="implementation"><span class="step-badge">3</span>Implementation (from scratch)</h2>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Node:
+    def __init__(self, key=None, value=None):
+        self.key = key
+        self.value = value
+        self.prev = None
+        self.next = None
+
+class LRUCache:
+    def __init__(self, capacity: int):
+        self.capacity = capacity
+        self.cache: dict = {}          # key -> Node, gives O(1) lookup
+
+        self.head = Node()             # dummy head = most-recently-used side
+        self.tail = Node()             # dummy tail = least-recently-used side
+        self.head.next = self.tail
+        self.tail.prev = self.head
+
+    def _remove(self, node: Node):
+        node.prev.next = node.next
+        node.next.prev = node.prev
+
+    def _add_to_front(self, node: Node):
+        node.next = self.head.next
+        node.prev = self.head
+        self.head.next.prev = node
+        self.head.next = node
+
+    def get(self, key):
+        if key not in self.cache:
+            return -1
+        node = self.cache[key]
+        self._remove(node)
+        self._add_to_front(node)       # touching a key marks it most-recently-used
+        return node.value
+
+    def put(self, key, value):
+        if key in self.cache:
+            self._remove(self.cache[key])
+
+        node = Node(key, value)
+        self.cache[key] = node
+        self._add_to_front(node)
+
+        if len(self.cache) &gt; self.capacity:
+            lru = self.tail.prev        # the real node right before the dummy tail
+            self._remove(lru)
+            del self.cache[lru.key]
+
+cache = LRUCache(2)
+cache.put(1, "A")
+cache.put(2, "B")
+cache.get(1)            # "A" -> 1 is now most recently used
+cache.put(3, "C")       # over capacity -> evicts 2 (least recently used)
+
+print(cache.get(2))     # -1 -> evicted
+print(cache.get(3))     # "C"</code></pre>
+    </div>
+
+    <div class="callout interview">
+      <div class="callout-title">🎤 Say this out loud before coding</div>
+      <p>"I need O(1) lookup <em>and</em> O(1) reordering, so I'll combine a hash map with a doubly linked list — the map gives me the node instantly, the list keeps them ordered by recency, and dummy head/tail sentinels let me avoid special-casing the empty-list or single-node cases." Stating this before writing code is worth more than the code itself.</p>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-title">💡 The Python shortcut worth mentioning</div>
+      <p><code>collections.OrderedDict</code> already maintains insertion/access order and supports moving a key to the end in O(1) — it implements almost exactly this structure internally. Showing you know both the from-scratch version <em>and</em> this shortcut is a strong signal in an interview.</p>
+    </div>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from collections import OrderedDict
+
+class LRUCacheSimple:
+    def __init__(self, capacity: int):
+        self.capacity = capacity
+        self.cache = OrderedDict()
+
+    def get(self, key):
+        if key not in self.cache:
+            return -1
+        self.cache.move_to_end(key)     # mark as most recently used
+        return self.cache[key]
+
+    def put(self, key, value):
+        if key in self.cache:
+            self.cache.move_to_end(key)
+        self.cache[key] = value
+        if len(self.cache) &gt; self.capacity:
+            self.cache.popitem(last=False)   # evict the least recently used (front)</code></pre>
+    </div>
+
+    <h2 id="extending">4. Extending the Design (common follow-ups)</h2>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "How would you make this thread-safe?"</div>
+      <p>Wrap <code>get</code> and <code>put</code> bodies in a single <code>threading.Lock</code> — because both operations mutate the linked list <em>and</em> the map together, a per-operation (not per-node) lock is needed to keep the two structures consistent with each other.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "How would you add TTL-based expiry on top of LRU?"</div>
+      <p>Store an <code>expires_at</code> timestamp on each <code>Node</code>; in <code>get</code>, check it and treat an expired entry as a miss (evicting it lazily), or run a periodic background sweep for proactive cleanup — the same "lazy vs. active expiry" trade-off that real caching systems (Redis, etc.) make.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "What if you needed LFU (Least Frequently Used) instead of LRU?"</div>
+      <p>A genuinely different data structure: track an access-frequency count per key, and evict the lowest-frequency entry (ties broken by recency). This needs a frequency-to-keys map alongside the key-to-node map — a good way to show you understand LRU isn't "the" caching algorithm, just the most common one.</p>
+    </div>
+
+    <div class="revision-box">
+      <h3>📌 Quick Revision — Cheat Sheet</h3>
+      <ul>
+        <li><strong>Structure:</strong> hash map (key → node) + doubly linked list (ordered by recency).</li>
+        <li><strong>get:</strong> look up in the map, then move the node to the front (most recently used).</li>
+        <li><strong>put:</strong> insert/update at the front; if over capacity, evict the node at the tail.</li>
+        <li>Dummy head/tail sentinels eliminate empty-list and single-node edge cases entirely.</li>
+        <li><code>collections.OrderedDict</code> gives you the same behavior in ~10 lines — know both versions.</li>
+      </ul>
+    </div>
+
+    <footer class="page-footer">LRU Cache · LLD Revision Notes</footer>
+  </main>
+
+  <aside class="toc">
+    <div class="toc-title">On this page</div>
+    <ul id="toc-list"></ul>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

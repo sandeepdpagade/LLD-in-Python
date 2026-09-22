@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tic-Tac-Toe — LLD Revision Notes</title>
+<link rel="stylesheet" href="../css/style.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+<style>
+  .step-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 42px; height: 42px; border-radius: 10px;
+    background: var(--accent-soft); color: var(--accent);
+    font-weight: 800; font-size: 1.05rem; margin-right: 0.6rem; vertical-align: middle;
+  }
+</style>
+</head>
+<body data-page="tictactoe" data-root="../">
+
+<header class="topbar">
+  <button id="menu-toggle" class="menu-toggle" aria-label="Toggle menu">☰</button>
+  <div class="brand"><a href="../index.html" style="color:inherit;display:flex;align-items:center;gap:0.5rem;"><span class="logo">LLD</span> LLD in Python</a></div>
+  <div class="controls">
+    <a class="github-link" href="https://github.com/sandeepdpagade/LLD-in-Python" target="_blank" rel="noopener" aria-label="View source on GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span class="github-label">GitHub</span>
+    </a>
+    <button id="theme-toggle" class="theme-toggle">🌙 Dark</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <nav id="sidebar-nav"></nav>
+  </aside>
+
+  <main class="content">
+    <h1>Tic-Tac-Toe</h1>
+    <p class="subtitle">A deceptively simple warm-up problem — the real test is whether your design generalizes past a 3x3 grid.</p>
+
+    <div class="lead-badges">
+      <span class="pill">⭕ Practice Problem</span>
+      <span class="pill">⏱ ~15 min read</span>
+      <span class="pill">🎯 Strategy for pluggable win rules</span>
+    </div>
+
+    <h2 id="problem-statement"><span class="step-badge">1</span>Problem Statement</h2>
+    <p>Design a 2-player Tic-Tac-Toe game that:</p>
+    <ul>
+      <li>Supports an <code>N x N</code> board, not just the fixed 3x3.</li>
+      <li>Validates moves (can't play an occupied cell, can't play out of turn).</li>
+      <li>Detects a win (row, column, or diagonal) or a draw after every move.</li>
+    </ul>
+
+    <h2 id="entities"><span class="step-badge">2</span>Identifying Core Entities</h2>
+    <table>
+      <tr><th>Entity</th><th>Responsibility</th></tr>
+      <tr><td><code>Symbol</code></td><td>Enum: X, O, or empty</td></tr>
+      <tr><td><code>Player</code></td><td>A name paired with a symbol</td></tr>
+      <tr><td><code>Board</code></td><td>Owns the grid; knows how to place a mark and check "is full"</td></tr>
+      <tr><td><code>WinningStrategy</code></td><td>Decides whether a given symbol has won on the current board</td></tr>
+      <tr><td><code>TicTacToeGame</code></td><td>Orchestrates turns and asks the strategy for a winner after each move</td></tr>
+    </table>
+
+    <h2 id="design-decisions"><span class="step-badge">3</span>Design Decisions &amp; Patterns Used</h2>
+    <table>
+      <tr><th>Decision</th><th>Pattern</th><th>Why</th></tr>
+      <tr><td>Win-checking logic lives outside <code>Board</code> and <code>Game</code></td><td><strong>Strategy</strong></td><td>Swapping "3-in-a-row anywhere on NxN" for "exactly 3-in-a-row on a 5x5 board" is a new class, not a rewrite</td></tr>
+      <tr><td><code>Board</code> only knows about grid state, never about turns or win conditions</td><td><strong>SRP</strong></td><td>The board can be unit-tested (placement, fullness) completely independently of game rules</td></tr>
+    </table>
+
+    <h2 id="implementation"><span class="step-badge">4</span>Implementation</h2>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from enum import Enum
+from abc import ABC, abstractmethod
+
+class Symbol(Enum):
+    X = "X"
+    O = "O"
+    EMPTY = "-"
+
+class Player:
+    def __init__(self, name: str, symbol: Symbol):
+        self.name = name
+        self.symbol = symbol
+
+class Board:
+    def __init__(self, size: int = 3):
+        self.size = size
+        self.grid = [[Symbol.EMPTY for _ in range(size)] for _ in range(size)]
+
+    def place(self, row: int, col: int, symbol: Symbol) -> bool:
+        if self.grid[row][col] != Symbol.EMPTY:
+            return False
+        self.grid[row][col] = symbol
+        return True
+
+    def is_full(self) -> bool:
+        return all(cell != Symbol.EMPTY for row in self.grid for cell in row)
+
+    def print_board(self):
+        for row in self.grid:
+            print(" ".join(cell.value for cell in row))</code></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class WinningStrategy(ABC):
+    @abstractmethod
+    def check_winner(self, board: Board, symbol: Symbol) -> bool:
+        pass
+
+class RowColDiagonalStrategy(WinningStrategy):
+    def check_winner(self, board, symbol):
+        n, g = board.size, board.grid
+        for i in range(n):
+            if all(g[i][j] == symbol for j in range(n)):       # row i
+                return True
+            if all(g[j][i] == symbol for j in range(n)):       # column i
+                return True
+        if all(g[i][i] == symbol for i in range(n)):           # main diagonal
+            return True
+        if all(g[i][n - 1 - i] == symbol for i in range(n)):   # anti-diagonal
+            return True
+        return False
+
+class TicTacToeGame:
+    def __init__(self, players: list[Player], board_size: int = 3, strategy: WinningStrategy = None):
+        self.players = players
+        self.board = Board(board_size)
+        self.strategy = strategy or RowColDiagonalStrategy()
+        self.current_index = 0
+
+    def play_turn(self, row: int, col: int) -> str:
+        player = self.players[self.current_index]
+        if not self.board.place(row, col, player.symbol):
+            return "Invalid move, try again"
+        if self.strategy.check_winner(self.board, player.symbol):
+            return f"{player.name} wins!"
+        if self.board.is_full():
+            return "It's a draw!"
+        self.current_index = (self.current_index + 1) % len(self.players)
+        return "Next turn"
+
+game = TicTacToeGame([Player("Alice", Symbol.X), Player("Bob", Symbol.O)])
+print(game.play_turn(0, 0))   # Next turn
+print(game.play_turn(1, 1))   # Next turn (Bob)
+print(game.play_turn(0, 1))   # Next turn (Alice)
+print(game.play_turn(2, 2))   # Next turn (Bob)
+print(game.play_turn(0, 2))   # Alice wins! (top row: X X X)</code></pre>
+    </div>
+
+    <h2 id="extending">5. Extending the Design (common follow-ups)</h2>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "How would you support 'K in a row' on an NxN board, not just a full row/column?"</div>
+      <p>Write a new <code>KInARowStrategy(WinningStrategy)</code> that scans in all four directions from the <em>just-played</em> cell (not the whole board) counting consecutive matching symbols — this is also an efficiency upgrade, since checking only from the last move is <code>O(N)</code> instead of re-scanning the entire board every turn.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "How would you add an AI opponent?"</div>
+      <p>Model <code>Player</code> as an interface with a <code>get_move(board)</code> method; a <code>HumanPlayer</code> reads input, an <code>AIPlayer</code> runs Minimax (with alpha-beta pruning for larger boards). <code>TicTacToeGame</code> doesn't need to know or care which kind of player it's dealing with — another natural Strategy split.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "How would you support undo?"</div>
+      <p><strong>Command pattern</strong> — wrap each move as a <code>PlaceMoveCommand</code> with <code>execute()</code>/<code>undo()</code>, and have <code>TicTacToeGame</code> keep a history stack, exactly like the Command example on the Behavioral Patterns page.</p>
+    </div>
+
+    <div class="revision-box">
+      <h3>📌 Quick Revision — Cheat Sheet</h3>
+      <ul>
+        <li><strong>Entities:</strong> Symbol, Player, Board, WinningStrategy, TicTacToeGame.</li>
+        <li><strong>Strategy:</strong> win-checking is fully decoupled — the tell-tale sign an interviewer is looking for.</li>
+        <li>Checking only from the last-played cell (not the whole board) is the efficiency answer for "K in a row" on large boards.</li>
+        <li>AI opponent and undo are the two most common extensions — both map to patterns you already know (Strategy, Command).</li>
+      </ul>
+    </div>
+
+    <footer class="page-footer">Tic-Tac-Toe · LLD Revision Notes</footer>
+  </main>
+
+  <aside class="toc">
+    <div class="toc-title">On this page</div>
+    <ul id="toc-list"></ul>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

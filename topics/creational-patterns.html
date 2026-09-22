@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Creational Design Patterns — LLD Revision Notes</title>
+<link rel="stylesheet" href="../css/style.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+<style>
+  .verdict-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.2rem 0.65rem;
+    border-radius: 20px;
+    margin-bottom: 0.5rem;
+  }
+  .verdict-bad { background: rgba(247, 118, 142, 0.12); color: var(--red); }
+  .verdict-good { background: rgba(158, 206, 106, 0.12); color: var(--green); }
+  .pattern-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 800;
+    font-size: 1.05rem;
+    margin-right: 0.6rem;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body data-page="creational" data-root="../">
+
+<header class="topbar">
+  <button id="menu-toggle" class="menu-toggle" aria-label="Toggle menu">☰</button>
+  <div class="brand"><a href="../index.html" style="color:inherit;display:flex;align-items:center;gap:0.5rem;"><span class="logo">LLD</span> LLD in Python</a></div>
+  <div class="controls">
+    <a class="github-link" href="https://github.com/sandeepdpagade/LLD-in-Python" target="_blank" rel="noopener" aria-label="View source on GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span class="github-label">GitHub</span>
+    </a>
+    <button id="theme-toggle" class="theme-toggle">🌙 Dark</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <nav id="sidebar-nav"></nav>
+  </aside>
+
+  <main class="content">
+    <h1>Creational Design Patterns</h1>
+    <p class="subtitle">Patterns that deal with <em>how objects get created</em> — Singleton, Factory Method, Abstract Factory, Builder, and Prototype — each with a real-world LLD example.</p>
+
+    <div class="lead-badges">
+      <span class="pill">🏗 Design Patterns</span>
+      <span class="pill">⏱ ~25 min read</span>
+      <span class="pill">🎯 GoF Creational family</span>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-title">💡 Why this matters</div>
+      <p>Every one of these patterns exists to answer the same question: <strong>"how do we create objects flexibly, without hard-coding <code>ClassName()</code> everywhere?"</strong> This directly supports the <strong>Open/Closed Principle</strong> — new object types get added without touching the code that creates them.</p>
+    </div>
+
+    <h2 id="overview">Overview</h2>
+    <table>
+      <tr><th>Pattern</th><th>Solves</th><th>One-line rule</th></tr>
+      <tr><td><strong>Singleton</strong></td><td>Need exactly one instance, globally</td><td>Class controls its own single instantiation</td></tr>
+      <tr><td><strong>Factory Method</strong></td><td>Don't know exact class to instantiate until runtime</td><td>Subclass/method decides which concrete class to create</td></tr>
+      <tr><td><strong>Abstract Factory</strong></td><td>Need a whole <em>family</em> of related objects that must match</td><td>A factory of factories, grouped by variant</td></tr>
+      <tr><td><strong>Builder</strong></td><td>Object needs many optional parts / complex construction steps</td><td>Build step-by-step instead of one giant constructor</td></tr>
+      <tr><td><strong>Prototype</strong></td><td>Creating from scratch is expensive; a similar object already exists</td><td>Clone an existing instance instead of building anew</td></tr>
+    </table>
+
+    <h2 id="singleton"><span class="pattern-badge">1</span>Singleton</h2>
+    <p><strong>Intent:</strong> Ensure a class has <em>only one instance</em> for the entire application lifetime, and provide one global access point to it.</p>
+    <p><strong>Real-world LLD example:</strong> A logging service, a database connection pool, or an app-wide configuration manager — you never want two independent instances silently tracking different state.</p>
+
+    <span class="verdict-tag verdict-bad">❌ Naive approach</span>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Logger:
+    def __init__(self):
+        self.logs = []
+    def log(self, msg):
+        self.logs.append(msg)
+
+logger1 = Logger()
+logger2 = Logger()          # a totally separate instance!
+logger1.log("User logged in")
+print(len(logger2.logs))    # 0 -> logger2 has no idea logger1 exists</code></pre>
+    </div>
+
+    <span class="verdict-tag verdict-good">✅ Singleton via <code>__new__</code></span>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Logger:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance.logs = []
+        return cls._instance
+
+    def log(self, msg):
+        self.logs.append(msg)
+
+logger1 = Logger()
+logger2 = Logger()
+logger1.log("User logged in")
+print(logger1 is logger2)     # True -> same object
+print(len(logger2.logs))      # 1    -> shared state, as intended</code></pre>
+    </div>
+
+    <p>The <strong>Pythonic</strong> way is usually simpler — a module is already a singleton, since Python caches imports:</p>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python"># logger_instance.py
+class _Logger:
+    def __init__(self):
+        self.logs = []
+    def log(self, msg):
+        self.logs.append(msg)
+
+logger = _Logger()     # created once, on first import
+
+# anywhere else:
+# from logger_instance import logger
+# logger.log("...")   -> always the same shared object</code></pre>
+    </div>
+
+    <div class="callout pitfall">
+      <div class="callout-title">🚨 Singleton is a controversial pattern</div>
+      <p>It introduces <strong>global mutable state</strong>, makes unit testing harder (state leaks between tests), and hides a class's dependencies. Many interviewers consider it an anti-pattern and expect you to justify it (e.g. "I'd only use this for a config/logger, and I'd still make it injectable for tests"). Also, a naive Singleton is <strong>not thread-safe</strong> — two threads can race past the <code>if cls._instance is None</code> check simultaneously; production code needs a lock around instance creation.</p>
+    </div>
+
+    <h2 id="factory-method"><span class="pattern-badge">2</span>Factory Method</h2>
+    <p><strong>Intent:</strong> Define a method for creating an object, but let the decision of <em>which concrete class</em> to instantiate be made at runtime (based on input, config, etc.) — the calling code never calls a concrete constructor directly.</p>
+    <p><strong>Real-world LLD example:</strong> A notification system that sends Email, SMS, or Push notifications depending on user preference — exactly the kind of thing that grows new types over time.</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class Notification(ABC):
+    @abstractmethod
+    def send(self, message): pass
+
+class EmailNotification(Notification):
+    def send(self, message): print(f"Email: {message}")
+
+class SMSNotification(Notification):
+    def send(self, message): print(f"SMS: {message}")
+
+class PushNotification(Notification):
+    def send(self, message): print(f"Push: {message}")
+
+class NotificationFactory:
+    @staticmethod
+    def create(channel: str) -> Notification:
+        mapping = {
+            "email": EmailNotification,
+            "sms": SMSNotification,
+            "push": PushNotification,
+        }
+        if channel not in mapping:
+            raise ValueError(f"Unknown channel: {channel}")
+        return mapping[channel]()     # caller never calls EmailNotification() directly
+
+notifier = NotificationFactory.create("sms")
+notifier.send("Your OTP is 4242")     # SMS: Your OTP is 4242
+
+# Adding WhatsAppNotification later only means editing the factory's mapping,
+# never the calling code that requests notifications.</code></pre>
+    </div>
+
+    <div class="callout interview">
+      <div class="callout-title">🎤 Interview one-liner</div>
+      <p>Factory Method is the concrete mechanism behind the <strong>Open/Closed Principle</strong> example you saw on the SOLID page — instead of an <code>if/elif</code> chain scattered across the codebase, all "which class do I create" logic lives in exactly one place.</p>
+    </div>
+
+    <h2 id="abstract-factory"><span class="pattern-badge">3</span>Abstract Factory</h2>
+    <p><strong>Intent:</strong> Produce <em>families of related objects</em> without specifying their concrete classes — used when objects must be created in matching sets that stay consistent with each other.</p>
+    <p><strong>Real-world LLD example:</strong> A cross-platform UI toolkit that must render either an all-Windows set of widgets or an all-Mac set — you should never accidentally get a Windows button paired with a Mac checkbox.</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+# --- Abstract product interfaces ---
+class Button(ABC):
+    @abstractmethod
+    def render(self): pass
+
+class Checkbox(ABC):
+    @abstractmethod
+    def render(self): pass
+
+# --- Windows family ---
+class WindowsButton(Button):
+    def render(self): return "[Windows Button]"
+
+class WindowsCheckbox(Checkbox):
+    def render(self): return "[Windows Checkbox]"
+
+# --- Mac family ---
+class MacButton(Button):
+    def render(self): return "(Mac Button)"
+
+class MacCheckbox(Checkbox):
+    def render(self): return "(Mac Checkbox)"
+
+# --- Abstract Factory ---
+class UIFactory(ABC):
+    @abstractmethod
+    def create_button(self) -> Button: pass
+    @abstractmethod
+    def create_checkbox(self) -> Checkbox: pass
+
+class WindowsFactory(UIFactory):
+    def create_button(self): return WindowsButton()
+    def create_checkbox(self): return WindowsCheckbox()
+
+class MacFactory(UIFactory):
+    def create_button(self): return MacButton()
+    def create_checkbox(self): return MacCheckbox()
+
+def render_ui(factory: UIFactory):
+    print(factory.create_button().render())
+    print(factory.create_checkbox().render())
+
+render_ui(WindowsFactory())   # [Windows Button] / [Windows Checkbox] -> never mixed
+render_ui(MacFactory())       # (Mac Button) / (Mac Checkbox)</code></pre>
+    </div>
+
+    <table>
+      <tr><th></th><th>Factory Method</th><th>Abstract Factory</th></tr>
+      <tr><td>Produces</td><td>One product</td><td>A family of related products</td></tr>
+      <tr><td>Mechanism</td><td>One creation method</td><td>An object with multiple creation methods</td></tr>
+      <tr><td>Example</td><td><code>NotificationFactory.create("sms")</code></td><td><code>WindowsFactory</code> creating a matching Button + Checkbox</td></tr>
+    </table>
+
+    <h2 id="builder"><span class="pattern-badge">4</span>Builder</h2>
+    <p><strong>Intent:</strong> Separate the construction of a complex object from its final representation, building it up step-by-step — avoids a constructor with a huge number of optional parameters (the "telescoping constructor" problem).</p>
+    <p><strong>Real-world LLD example:</strong> Building a customizable <code>Burger</code> or an HTTP request where most fields are optional and construction reads better as a chain of steps.</p>
+
+    <span class="verdict-tag verdict-bad">❌ Telescoping constructor</span>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Burger:
+    def __init__(self, bun, patty, cheese=False, lettuce=False,
+                 tomato=False, sauce=None, bacon=False):
+        ...
+
+# Caller has to remember every positional slot, even to skip most of them:
+b = Burger("sesame", "chicken", False, True, False, "mayo", True)
+# Which arg was cheese again? Error-prone and unreadable.</code></pre>
+    </div>
+
+    <span class="verdict-tag verdict-good">✅ Builder pattern</span>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Burger:
+    def __init__(self):
+        self.bun = None
+        self.patty = None
+        self.toppings = []
+
+    def __repr__(self):
+        return f"{self.bun} bun, {self.patty} patty, toppings={self.toppings}"
+
+class BurgerBuilder:
+    def __init__(self):
+        self.burger = Burger()
+
+    def set_bun(self, bun):
+        self.burger.bun = bun
+        return self                       # return self -> enables chaining
+
+    def set_patty(self, patty):
+        self.burger.patty = patty
+        return self
+
+    def add_topping(self, topping):
+        self.burger.toppings.append(topping)
+        return self
+
+    def build(self) -> Burger:
+        return self.burger
+
+burger = (
+    BurgerBuilder()
+    .set_bun("sesame")
+    .set_patty("chicken")
+    .add_topping("cheese")
+    .add_topping("bacon")
+    .build()
+)
+print(burger)    # sesame bun, chicken patty, toppings=['cheese', 'bacon']
+# Self-documenting: every step's purpose is explicit, and steps can be optional/reordered.</code></pre>
+    </div>
+
+    <div class="callout interview">
+      <div class="callout-title">🎤 When to reach for Builder</div>
+      <p>Use it when a class has <strong>4+ optional/combinable fields</strong>, or when construction genuinely happens in ordered steps (e.g. an <code>HttpRequestBuilder</code> setting URL → headers → body → timeout). If a class only has 2-3 required fields, a plain constructor is simpler — don't over-engineer.</p>
+    </div>
+
+    <h2 id="prototype"><span class="pattern-badge">5</span>Prototype</h2>
+    <p><strong>Intent:</strong> Create a new object by <em>cloning</em> an existing instance instead of building one from scratch — useful when construction is expensive, or you want many variations of a similar base object.</p>
+    <p><strong>Real-world LLD example:</strong> A game with a "default enemy" template that gets cloned and slightly modified per spawn, instead of re-running expensive setup logic each time.</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">import copy
+
+class Enemy:
+    def __init__(self, kind, health, weapons):
+        self.kind = kind
+        self.health = health
+        self.weapons = weapons          # a mutable list -> needs a deep copy
+
+    def clone(self):
+        return copy.deepcopy(self)      # Prototype: clone instead of rebuild
+
+    def __repr__(self):
+        return f"{self.kind}(hp={self.health}, weapons={self.weapons})"
+
+goblin_template = Enemy("Goblin", health=50, weapons=["dagger"])
+
+goblin1 = goblin_template.clone()
+goblin2 = goblin_template.clone()
+goblin2.weapons.append("shield")        # only affects goblin2
+
+print(goblin1)   # Goblin(hp=50, weapons=['dagger'])
+print(goblin2)   # Goblin(hp=50, weapons=['dagger', 'shield'])
+print(goblin1 is goblin2)   # False -> independent objects, no shared references</code></pre>
+    </div>
+
+    <div class="callout warn">
+      <div class="callout-title">⚠️ Shallow vs deep copy</div>
+      <p>Always check whether <code>copy.copy()</code> (shallow) is enough or you need <code>copy.deepcopy()</code>. A shallow copy duplicates the top-level object but still shares references to nested mutable objects (like <code>weapons</code> above) — mutating the clone's list would silently mutate the original's too.</p>
+    </div>
+
+    <div class="revision-box">
+      <h3>📌 Quick Revision — Cheat Sheet</h3>
+      <ul>
+        <li><strong>Singleton</strong> — one instance, globally shared. Watch for thread-safety and testability concerns.</li>
+        <li><strong>Factory Method</strong> — one method decides which single concrete class to instantiate.</li>
+        <li><strong>Abstract Factory</strong> — a factory that produces a whole matching <em>family</em> of related objects.</li>
+        <li><strong>Builder</strong> — construct step-by-step via chained calls; fixes the telescoping-constructor problem.</li>
+        <li><strong>Prototype</strong> — clone an existing object (<code>copy.deepcopy</code>) instead of rebuilding from scratch.</li>
+      </ul>
+    </div>
+
+    <h2 id="interview-questions">Common Interview Questions</h2>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: Is Singleton an anti-pattern?</div>
+      <p>It's controversial rather than strictly bad — it introduces global state and hidden dependencies, which hurts testability. Most interviewers accept it for genuinely global, stateless-ish services (logging, config) but expect you to note the trade-off, and ideally still make it injectable (pass the instance in) rather than reaching for the global directly everywhere.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: Factory Method vs Abstract Factory — how do you tell them apart quickly?</div>
+      <p>Count the products: if you're creating <strong>one</strong> kind of object whose exact class varies, that's Factory Method. If you're creating a <strong>matching set</strong> of several different object types that must stay consistent with each other (like a UI theme's button + checkbox + scrollbar), that's Abstract Factory.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: Why not just use keyword arguments with defaults instead of Builder?</div>
+      <p>For a handful of optional fields, keyword args are simpler and idiomatic Python — Builder is overkill. Reach for Builder when construction has real sequential steps, validation between steps, or so many optional combinations that a single constructor call becomes unreadable regardless of keyword args.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: How would you make the naive Singleton thread-safe?</div>
+      <p>Wrap the instance-creation check in a <code>threading.Lock</code>, using double-checked locking so the lock is only acquired the first time (checking <code>_instance is None</code> once outside the lock, then again inside it before creating), so subsequent calls don't pay the locking cost.</p>
+    </div>
+
+    <footer class="page-footer">Creational Design Patterns · LLD Revision Notes</footer>
+  </main>
+
+  <aside class="toc">
+    <div class="toc-title">On this page</div>
+    <ul id="toc-list"></ul>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

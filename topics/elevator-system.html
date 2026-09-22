@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Elevator System — LLD Revision Notes</title>
+<link rel="stylesheet" href="../css/style.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+<style>
+  .step-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 800;
+    font-size: 1.05rem;
+    margin-right: 0.6rem;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body data-page="elevator" data-root="../">
+
+<header class="topbar">
+  <button id="menu-toggle" class="menu-toggle" aria-label="Toggle menu">☰</button>
+  <div class="brand"><a href="../index.html" style="color:inherit;display:flex;align-items:center;gap:0.5rem;"><span class="logo">LLD</span> LLD in Python</a></div>
+  <div class="controls">
+    <a class="github-link" href="https://github.com/sandeepdpagade/LLD-in-Python" target="_blank" rel="noopener" aria-label="View source on GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span class="github-label">GitHub</span>
+    </a>
+    <button id="theme-toggle" class="theme-toggle">🌙 Dark</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <nav id="sidebar-nav"></nav>
+  </aside>
+
+  <main class="content">
+    <h1>Elevator System</h1>
+    <p class="subtitle">Multi-elevator dispatch, worked end-to-end — where the State and Strategy patterns stop being theoretical and start solving a real coordination problem.</p>
+
+    <div class="lead-badges">
+      <span class="pill">🛗 Practice Problem</span>
+      <span class="pill">⏱ ~25 min read</span>
+      <span class="pill">🎯 State + Strategy in one design</span>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-title">💡 Why this problem is a step up from Parking Lot</div>
+      <p>Parking Lot is mostly about matching and composition. Elevator System adds a genuinely new dimension: <strong>coordination over time</strong> — each elevator has its own state machine, and a controller must decide which of several moving elevators should answer a new request. This is the problem that separates "I know the patterns" from "I can apply them under a real constraint."</p>
+    </div>
+
+    <h2 id="problem-statement"><span class="step-badge">1</span>Problem Statement</h2>
+    <p>Design an elevator system for a building with <code>N</code> elevators and <code>M</code> floors that supports:</p>
+    <ul>
+      <li><strong>Hall calls</strong> — a person on a floor presses "up" or "down" to request an elevator.</li>
+      <li><strong>Car calls</strong> — a person inside an elevator presses a destination floor button.</li>
+      <li>A dispatch mechanism that decides <em>which</em> elevator answers a given hall call.</li>
+      <li>Each elevator moves toward its pending stops one floor at a time, opening its doors at each stop.</li>
+    </ul>
+
+    <h2 id="requirements"><span class="step-badge">2</span>Clarifying Requirements</h2>
+    <table>
+      <tr><th>Functional</th><th>Non-functional</th></tr>
+      <tr><td>Dispatch the "best" elevator for a hall call</td><td>Minimize average wait time across all requests</td></tr>
+      <tr><td>Track each elevator's current floor, direction, and pending stops</td><td>Handle concurrent requests from multiple floors safely</td></tr>
+      <tr><td>Support both hall calls (external) and destination selection (internal)</td><td>Dispatch algorithm should be swappable (nearest-car vs zoning) without touching the controller</td></tr>
+      <tr><td>Open doors automatically when an elevator reaches a requested floor</td><td>Scale from a small building (2 elevators) to a skyscraper (dozens) with the same core design</td></tr>
+    </table>
+
+    <h2 id="entities"><span class="step-badge">3</span>Identifying Core Entities</h2>
+    <table>
+      <tr><th>Entity</th><th>Responsibility</th></tr>
+      <tr><td><code>Elevator</code></td><td>Owns its own position, direction, state, and set of pending stops</td></tr>
+      <tr><td><code>Direction</code> / <code>ElevatorState</code></td><td>Enums describing motion direction and current mode (idle/moving/doors open)</td></tr>
+      <tr><td><code>Request</code></td><td>A floor + optional direction (hall call) or just a floor (car call)</td></tr>
+      <tr><td><code>DispatchStrategy</code></td><td>Decides which elevator should answer a given hall call</td></tr>
+      <tr><td><code>ElevatorController</code></td><td>The single building-wide entry point owning all elevators</td></tr>
+    </table>
+
+    <h2 id="design-decisions"><span class="step-badge">4</span>Design Decisions &amp; Patterns Used</h2>
+    <table>
+      <tr><th>Decision</th><th>Pattern</th><th>Why</th></tr>
+      <tr><td>An elevator behaves differently depending on whether it's idle, moving, or has its doors open</td><td><strong>State</strong></td><td>Avoids one giant method full of <code>if</code> checks on a status flag — matches how a real elevator's control board actually works</td></tr>
+      <tr><td>The dispatch algorithm (which elevator answers a call) is pluggable</td><td><strong>Strategy</strong></td><td>Lets you swap "nearest elevator" for a smarter SCAN/LOOK algorithm later, with zero changes to <code>ElevatorController</code> (OCP)</td></tr>
+      <tr><td>Exactly one <code>ElevatorController</code> coordinates the whole building</td><td><strong>Singleton</strong></td><td>There's only one physical bank of elevators — no reason for two independent controllers to exist</td></tr>
+      <tr><td>Floor displays could show live elevator position</td><td><strong>Observer</strong> <em>(extension)</em></td><td>Displays react to elevator state changes without the elevator knowing who's watching</td></tr>
+    </table>
+
+    <h2 id="implementation"><span class="step-badge">5</span>Implementation</h2>
+
+    <h3>Enums &amp; requests</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from enum import Enum
+
+class Direction(Enum):
+    UP = 1
+    DOWN = -1
+    IDLE = 0
+
+class ElevatorState(Enum):
+    IDLE = "idle"
+    MOVING = "moving"
+    DOORS_OPEN = "doors_open"
+
+class Request:
+    def __init__(self, floor: int, direction: Direction = None):
+        self.floor = floor
+        self.direction = direction   # None for an internal car call (just a destination)</code></pre>
+    </div>
+
+    <h3>Elevator — a small state machine</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class Elevator:
+    def __init__(self, elevator_id: int, capacity: int = 8):
+        self.id = elevator_id
+        self.current_floor = 0
+        self.direction = Direction.IDLE
+        self.state = ElevatorState.IDLE
+        self.capacity = capacity
+        self.stops: set[int] = set()          # floors this elevator must still visit
+
+    def add_stop(self, floor: int):
+        self.stops.add(floor)
+        if self.state == ElevatorState.IDLE:
+            self.direction = Direction.UP if floor &gt; self.current_floor else Direction.DOWN
+
+    def step(self):
+        """Advance the elevator by one simulated time unit."""
+        if not self.stops:
+            self.state = ElevatorState.IDLE
+            self.direction = Direction.IDLE
+            return
+
+        if self.current_floor in self.stops:
+            self.state = ElevatorState.DOORS_OPEN
+            self.stops.remove(self.current_floor)
+            print(f"Elevator {self.id}: doors open at floor {self.current_floor}")
+            return
+
+        self.state = ElevatorState.MOVING
+        self.current_floor += self.direction.value
+        print(f"Elevator {self.id}: moving to floor {self.current_floor}")</code></pre>
+    </div>
+
+    <div class="callout warn">
+      <div class="callout-title">⚠️ This is a simplified state machine</div>
+      <p>Real elevator logic keeps moving in its current direction until <em>no more stops lie ahead in that direction</em>, then reverses (the "SCAN"/"LOOK" disk-scheduling algorithm) — it doesn't reset direction after every single stop. The version above is intentionally simplified for clarity; see the interview questions below for the production version of this idea.</p>
+    </div>
+
+    <h3>Dispatch strategy</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class DispatchStrategy(ABC):
+    @abstractmethod
+    def select_elevator(self, elevators: list[Elevator], request: Request) -> Elevator:
+        pass
+
+class NearestElevatorStrategy(DispatchStrategy):
+    def select_elevator(self, elevators, request):
+        return min(elevators, key=lambda e: abs(e.current_floor - request.floor))</code></pre>
+    </div>
+
+    <h3>ElevatorController (Singleton)</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class ElevatorController:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self, num_elevators: int = 4, strategy: DispatchStrategy = None):
+        if getattr(self, "_initialized", False):
+            return
+        self.elevators = [Elevator(i) for i in range(num_elevators)]
+        self.strategy = strategy or NearestElevatorStrategy()
+        self._initialized = True
+
+    def request_elevator(self, floor: int, direction: Direction) -> Elevator:
+        """A hall call from a floor."""
+        request = Request(floor, direction)
+        elevator = self.strategy.select_elevator(self.elevators, request)
+        elevator.add_stop(floor)
+        print(f"Dispatched elevator {elevator.id} to floor {floor}")
+        return elevator
+
+    def select_floor(self, elevator_id: int, floor: int):
+        """A car call from inside a specific elevator."""
+        self.elevators[elevator_id].add_stop(floor)</code></pre>
+    </div>
+
+    <h3>Putting it together</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">controller = ElevatorController(num_elevators=3)
+
+controller.request_elevator(floor=5, direction=Direction.UP)   # a hall call
+controller.select_floor(elevator_id=0, floor=8)                 # a car call inside elevator 0
+
+for _ in range(6):
+    for elevator in controller.elevators:
+        elevator.step()
+
+same_controller = ElevatorController()   # Singleton -> same instance, same elevators
+print(controller is same_controller)     # True</code></pre>
+    </div>
+
+    <h2 id="extending">6. Extending the Design (common follow-ups)</h2>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "Your dispatch algorithm looks naive — how would you improve it?"</div>
+      <p>Prefer an elevator that's <strong>idle</strong> or already <strong>moving toward the request in the same direction</strong> over one that's simply geographically nearest but moving away — otherwise you dispatch an elevator that has to overshoot, reverse, and come back, which is slower than picking a farther elevator already headed the right way. This is exactly why dispatch logic is a separate <code>DispatchStrategy</code> — you can swap in this smarter rule as a new class.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "How would real elevators avoid constantly reversing direction?"</div>
+      <p>The <strong>SCAN/LOOK algorithm</strong> (borrowed from disk-arm scheduling): an elevator keeps moving in its current direction, serving every pending stop along the way, and only reverses once there are no more requests ahead of it in that direction. This avoids the inefficient back-and-forth a naive "always answer the newest request" approach would cause.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "How would you add a capacity limit or an emergency/fire override?"</div>
+      <p>Capacity: track current load in <code>Elevator</code> and reject/skip it in <code>DispatchStrategy</code> once full. Emergency override: this is a great fit for <strong>Chain of Responsibility</strong> or a simple priority flag — an emergency request should bypass normal dispatch and force all elevators to a ground-floor "recall" state, which is naturally modeled as a distinct <code>ElevatorState</code>.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "How would you handle concurrent hall calls from multiple floors at once?"</div>
+      <p>Same concern as the Parking Lot's concurrent entry gates — wrap <code>request_elevator</code> in a lock so two simultaneous calls can't both select and reserve the same elevator based on stale state. For higher throughput, a per-elevator lock (rather than one global lock) reduces contention.</p>
+    </div>
+
+    <div class="revision-box">
+      <h3>📌 Quick Revision — Cheat Sheet</h3>
+      <ul>
+        <li><strong>Entities:</strong> Elevator, Direction/ElevatorState (enums), Request, DispatchStrategy, ElevatorController.</li>
+        <li><strong>State:</strong> each <code>Elevator</code> tracks its own idle/moving/doors-open state and reacts accordingly on <code>step()</code>.</li>
+        <li><strong>Strategy:</strong> <code>DispatchStrategy</code> decides which elevator answers a hall call — swappable without touching the controller.</li>
+        <li><strong>Singleton:</strong> one <code>ElevatorController</code> for the whole building.</li>
+        <li>Naive "nearest floor" dispatch is a good starting answer — but naming <strong>SCAN/LOOK</strong> as the production-grade follow-up is what separates a strong answer from a great one.</li>
+        <li>Concurrency, capacity limits, and emergency override are the three follow-ups interviewers reach for most often — have a one-sentence answer ready for each.</li>
+      </ul>
+    </div>
+
+    <footer class="page-footer">Elevator System · LLD Revision Notes</footer>
+  </main>
+
+  <aside class="toc">
+    <div class="toc-title">On this page</div>
+    <ul id="toc-list"></ul>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

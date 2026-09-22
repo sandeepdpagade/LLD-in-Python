@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cab Booking System — LLD Revision Notes</title>
+<link rel="stylesheet" href="../css/style.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+<style>
+  .step-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 42px; height: 42px; border-radius: 10px;
+    background: var(--accent-soft); color: var(--accent);
+    font-weight: 800; font-size: 1.05rem; margin-right: 0.6rem; vertical-align: middle;
+  }
+</style>
+</head>
+<body data-page="cab-booking" data-root="../">
+
+<header class="topbar">
+  <button id="menu-toggle" class="menu-toggle" aria-label="Toggle menu">☰</button>
+  <div class="brand"><a href="../index.html" style="color:inherit;display:flex;align-items:center;gap:0.5rem;"><span class="logo">LLD</span> LLD in Python</a></div>
+  <div class="controls">
+    <a class="github-link" href="https://github.com/sandeepdpagade/LLD-in-Python" target="_blank" rel="noopener" aria-label="View source on GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span class="github-label">GitHub</span>
+    </a>
+    <button id="theme-toggle" class="theme-toggle">🌙 Dark</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <nav id="sidebar-nav"></nav>
+  </aside>
+
+  <main class="content">
+    <h1>Cab Booking System</h1>
+    <p class="subtitle">An Uber/Ola-style ride matching service — where "which driver do we assign?" and "what do we charge?" are both just swappable strategies.</p>
+
+    <div class="lead-badges">
+      <span class="pill">🚕 Practice Problem</span>
+      <span class="pill">⏱ ~22 min read</span>
+      <span class="pill">🎯 Two independent Strategies</span>
+    </div>
+
+    <h2 id="problem-statement"><span class="step-badge">1</span>Problem Statement</h2>
+    <p>Design a ride-booking system that supports:</p>
+    <ul>
+      <li>Registering drivers with a live location and availability status.</li>
+      <li>A rider requesting a ride from a pickup to a drop location.</li>
+      <li>Matching the request to a suitable available driver.</li>
+      <li>Calculating a fare once the trip completes.</li>
+    </ul>
+
+    <h2 id="requirements"><span class="step-badge">2</span>Clarifying Requirements</h2>
+    <table>
+      <tr><th>Functional</th><th>Non-functional</th></tr>
+      <tr><td>Match a rider to the "best" available driver</td><td>Matching algorithm should be swappable (nearest-driver today, ETA-based later)</td></tr>
+      <tr><td>Track trip lifecycle: requested → accepted → completed</td><td>Fare calculation should be swappable (distance-based today, surge pricing later)</td></tr>
+      <tr><td>Calculate fare based on distance</td><td>A driver can only be matched to one active trip at a time</td></tr>
+    </table>
+
+    <h2 id="entities"><span class="step-badge">3</span>Identifying Core Entities</h2>
+    <table>
+      <tr><th>Entity</th><th>Responsibility</th></tr>
+      <tr><td><code>Location</code></td><td>A coordinate, with a distance calculation to another location</td></tr>
+      <tr><td><code>Driver</code></td><td>Location + availability status</td></tr>
+      <tr><td><code>Rider</code></td><td>The person requesting a ride</td></tr>
+      <tr><td><code>Trip</code></td><td>Pickup/drop, matched driver, status, final fare</td></tr>
+      <tr><td><code>MatchingStrategy</code></td><td>Picks a driver for a ride request</td></tr>
+      <tr><td><code>FareStrategy</code></td><td>Computes the fare for a completed trip</td></tr>
+      <tr><td><code>RideBookingService</code></td><td>The single entry point coordinating drivers, matching, and fares</td></tr>
+    </table>
+
+    <h2 id="design-decisions"><span class="step-badge">4</span>Design Decisions &amp; Patterns Used</h2>
+    <table>
+      <tr><th>Decision</th><th>Pattern</th><th>Why</th></tr>
+      <tr><td>Driver selection logic is a separate, injectable object</td><td><strong>Strategy</strong></td><td>Swapping "nearest driver" for a smarter ETA/traffic-aware algorithm never touches <code>RideBookingService</code></td></tr>
+      <tr><td>Fare calculation is a separate, injectable object</td><td><strong>Strategy</strong></td><td>Surge pricing becomes a new <code>FareStrategy</code> implementation, not a rewrite of trip logic</td></tr>
+      <tr><td>One <code>RideBookingService</code> coordinates the whole driver pool</td><td><strong>Singleton</strong></td><td>A single source of truth for who's available, city-wide</td></tr>
+    </table>
+
+    <h2 id="implementation"><span class="step-badge">5</span>Implementation</h2>
+
+    <h3>Locations, drivers, riders</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from enum import Enum
+from abc import ABC, abstractmethod
+import math
+
+class DriverStatus(Enum):
+    AVAILABLE = "available"
+    ON_TRIP = "on_trip"
+
+class TripStatus(Enum):
+    REQUESTED = "requested"
+    ACCEPTED = "accepted"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+class Location:
+    def __init__(self, lat: float, lng: float):
+        self.lat, self.lng = lat, lng
+
+    def distance_to(self, other: "Location") -> float:
+        return math.dist((self.lat, self.lng), (other.lat, other.lng))
+
+class Driver:
+    def __init__(self, driver_id: str, location: Location):
+        self.driver_id = driver_id
+        self.location = location
+        self.status = DriverStatus.AVAILABLE
+
+class Rider:
+    def __init__(self, rider_id: str):
+        self.rider_id = rider_id
+
+class Trip:
+    def __init__(self, trip_id: str, rider: Rider, pickup: Location, drop: Location):
+        self.trip_id = trip_id
+        self.rider = rider
+        self.driver: Driver | None = None
+        self.pickup = pickup
+        self.drop = drop
+        self.status = TripStatus.REQUESTED
+        self.fare = 0.0</code></pre>
+    </div>
+
+    <h3>Matching &amp; fare strategies</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class MatchingStrategy(ABC):
+    @abstractmethod
+    def find_driver(self, drivers: list[Driver], pickup: Location) -> Driver | None:
+        pass
+
+class NearestDriverStrategy(MatchingStrategy):
+    def find_driver(self, drivers, pickup):
+        available = [d for d in drivers if d.status == DriverStatus.AVAILABLE]
+        if not available:
+            return None
+        return min(available, key=lambda d: d.location.distance_to(pickup))
+
+class FareStrategy(ABC):
+    @abstractmethod
+    def calculate(self, pickup: Location, drop: Location) -> float:
+        pass
+
+class DistanceFareStrategy(FareStrategy):
+    RATE_PER_KM = 12
+    BASE_FARE = 30
+
+    def calculate(self, pickup, drop):
+        return round(self.BASE_FARE + pickup.distance_to(drop) * self.RATE_PER_KM, 2)</code></pre>
+    </div>
+
+    <h3>RideBookingService (Singleton)</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">class RideBookingService:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self):
+        if getattr(self, "_initialized", False):
+            return
+        self.drivers: list[Driver] = []
+        self.trips: dict[str, Trip] = {}
+        self.matching_strategy: MatchingStrategy = NearestDriverStrategy()
+        self.fare_strategy: FareStrategy = DistanceFareStrategy()
+        self._initialized = True
+
+    def register_driver(self, driver: Driver):
+        self.drivers.append(driver)
+
+    def request_ride(self, rider: Rider, pickup: Location, drop: Location) -> Trip:
+        driver = self.matching_strategy.find_driver(self.drivers, pickup)
+        if not driver:
+            raise Exception("No drivers available")
+
+        trip = Trip(f"T{len(self.trips) + 1}", rider, pickup, drop)
+        trip.driver = driver
+        trip.status = TripStatus.ACCEPTED
+        driver.status = DriverStatus.ON_TRIP
+        self.trips[trip.trip_id] = trip
+        print(f"Trip {trip.trip_id}: matched driver {driver.driver_id}")
+        return trip
+
+    def complete_trip(self, trip: Trip):
+        trip.status = TripStatus.COMPLETED
+        trip.fare = self.fare_strategy.calculate(trip.pickup, trip.drop)
+        trip.driver.status = DriverStatus.AVAILABLE
+        print(f"Trip {trip.trip_id} completed. Fare: {trip.fare}")</code></pre>
+    </div>
+
+    <h3>Putting it together</h3>
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">service = RideBookingService()
+service.register_driver(Driver("D1", Location(12.90, 77.60)))
+service.register_driver(Driver("D2", Location(12.95, 77.62)))
+
+rider = Rider("R1")
+trip = service.request_ride(rider, pickup=Location(12.91, 77.61), drop=Location(12.93, 77.64))
+# Trip T1: matched driver D1
+
+service.complete_trip(trip)
+# Trip T1 completed. Fare: 32.87 (base fare + distance-based rate)</code></pre>
+    </div>
+
+    <h2 id="extending">6. Extending the Design (common follow-ups)</h2>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "How would you add surge pricing during high demand?"</div>
+      <p>A new <code>SurgeFareStrategy</code> wrapping <code>DistanceFareStrategy</code> and multiplying by a demand factor — or, even better, a <strong>Decorator</strong> around any <code>FareStrategy</code> (<code>SurgeDecorator(base_strategy, multiplier)</code>), so surge pricing can stack on top of whichever base strategy is active without duplicating fare logic.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "How would riders see the driver's live location during the trip?"</div>
+      <p><strong>Observer</strong> — the rider's app subscribes to a <code>Trip</code>'s location updates; the driver's app periodically pushes location changes that notify all subscribed observers, without <code>Trip</code> needing to know how each client displays it.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 "What if the driver cancels after accepting?"</div>
+      <p>This is where <code>Trip</code>'s simple status enum starts to strain — a full <strong>State pattern</strong> (as in the Elevator and BookMyShow pages) becomes worthwhile once you have enough transition-specific rules (e.g. "cancellation after <code>ACCEPTED</code> triggers re-matching; cancellation after <code>COMPLETED</code> is invalid").</p>
+    </div>
+
+    <div class="revision-box">
+      <h3>📌 Quick Revision — Cheat Sheet</h3>
+      <ul>
+        <li><strong>Entities:</strong> Location, Driver, Rider, Trip, MatchingStrategy, FareStrategy, RideBookingService.</li>
+        <li><strong>Two independent Strategies:</strong> who gets matched, and what it costs — neither depends on the other.</li>
+        <li><strong>Singleton:</strong> one <code>RideBookingService</code> per city/region.</li>
+        <li>Surge pricing = Decorator around FareStrategy; live tracking = Observer; cancellation rules = a good trigger to upgrade to full State.</li>
+      </ul>
+    </div>
+
+    <footer class="page-footer">Cab Booking System · LLD Revision Notes</footer>
+  </main>
+
+  <aside class="toc">
+    <div class="toc-title">On this page</div>
+    <ul id="toc-list"></ul>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

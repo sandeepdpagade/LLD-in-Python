@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Behavioral Design Patterns — LLD Revision Notes</title>
+<link rel="stylesheet" href="../css/style.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+<style>
+  .pattern-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 800;
+    font-size: 1.05rem;
+    margin-right: 0.6rem;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body data-page="behavioral" data-root="../">
+
+<header class="topbar">
+  <button id="menu-toggle" class="menu-toggle" aria-label="Toggle menu">☰</button>
+  <div class="brand"><a href="../index.html" style="color:inherit;display:flex;align-items:center;gap:0.5rem;"><span class="logo">LLD</span> LLD in Python</a></div>
+  <div class="controls">
+    <a class="github-link" href="https://github.com/sandeepdpagade/LLD-in-Python" target="_blank" rel="noopener" aria-label="View source on GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span class="github-label">GitHub</span>
+    </a>
+    <button id="theme-toggle" class="theme-toggle">🌙 Dark</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <nav id="sidebar-nav"></nav>
+  </aside>
+
+  <main class="content">
+    <h1>Behavioral Design Patterns</h1>
+    <p class="subtitle">Patterns that deal with <em>how objects communicate and distribute responsibility</em> — Strategy, Observer, Command, State, Template Method, and Chain of Responsibility.</p>
+
+    <div class="lead-badges">
+      <span class="pill">🔄 Design Patterns</span>
+      <span class="pill">⏱ ~28 min read</span>
+      <span class="pill">🎯 GoF Behavioral family</span>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-title">💡 Why this matters</div>
+      <p>Structural patterns compose objects; behavioral patterns decide <strong>who talks to whom, and when</strong>. This is where most classic LLD interview questions actually live — a Vending Machine is a State machine, a Notification system is an Observer, an Undo feature is a Command, and "handle this request through a chain of approvers" is Chain of Responsibility almost word-for-word.</p>
+    </div>
+
+    <h2 id="overview">Overview</h2>
+    <table>
+      <tr><th>Pattern</th><th>Solves</th><th>One-line rule</th></tr>
+      <tr><td><strong>Strategy</strong></td><td>Need to swap an algorithm/behavior at runtime</td><td>Inject the algorithm as an interchangeable object</td></tr>
+      <tr><td><strong>Observer</strong></td><td>Many objects need to react when one object changes</td><td>Subject notifies all registered observers automatically</td></tr>
+      <tr><td><strong>Command</strong></td><td>Need to queue, log, or undo an action</td><td>Wrap a request as an object with <code>execute()</code>/<code>undo()</code></td></tr>
+      <tr><td><strong>State</strong></td><td>Object's behavior depends on its current internal state</td><td>Delegate behavior to a swappable state object</td></tr>
+      <tr><td><strong>Template Method</strong></td><td>Several classes share the same overall algorithm, differing in a few steps</td><td>Fix the skeleton in the base class, let subclasses override steps</td></tr>
+      <tr><td><strong>Chain of Responsibility</strong></td><td>A request might need one of several possible handlers</td><td>Pass the request along a chain until someone handles it</td></tr>
+    </table>
+
+    <h2 id="strategy"><span class="pattern-badge">1</span>Strategy</h2>
+    <p><strong>Intent:</strong> Define a family of interchangeable algorithms, encapsulate each one, and let the client pick/swap which one to use at runtime — without the context class knowing the algorithm's details.</p>
+    <p><strong>Real-world LLD example:</strong> A navigation app that computes a route differently depending on the selected travel mode — Driving, Walking, or Biking.</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class RouteStrategy(ABC):
+    @abstractmethod
+    def build_route(self, start, end): pass
+
+class DrivingStrategy(RouteStrategy):
+    def build_route(self, start, end):
+        return f"Driving route from {start} to {end} via highway"
+
+class WalkingStrategy(RouteStrategy):
+    def build_route(self, start, end):
+        return f"Walking route from {start} to {end} via footpaths"
+
+class BikingStrategy(RouteStrategy):
+    def build_route(self, start, end):
+        return f"Biking route from {start} to {end} via bike lanes"
+
+class Navigator:
+    def __init__(self, strategy: RouteStrategy):
+        self.strategy = strategy
+
+    def set_strategy(self, strategy: RouteStrategy):    # swap at runtime
+        self.strategy = strategy
+
+    def get_directions(self, start, end):
+        return self.strategy.build_route(start, end)
+
+nav = Navigator(DrivingStrategy())
+print(nav.get_directions("Home", "Office"))    # Driving route...
+
+nav.set_strategy(WalkingStrategy())
+print(nav.get_directions("Home", "Office"))    # Walking route...</code></pre>
+    </div>
+
+    <div class="callout interview">
+      <div class="callout-title">🎤 Interview one-liner</div>
+      <p>You've already seen this pattern — it's exactly what fixed the Open/Closed Principle violation on the SOLID page (the discount calculator's <code>if/elif</code> chain). Strategy <em>is</em> the standard technique for satisfying OCP when behavior varies by type.</p>
+    </div>
+
+    <h2 id="observer"><span class="pattern-badge">2</span>Observer</h2>
+    <p><strong>Intent:</strong> Define a one-to-many relationship so that when one object (the <strong>subject</strong>) changes state, all its registered dependents (<strong>observers</strong>) are notified automatically.</p>
+    <p><strong>Real-world LLD example:</strong> A YouTube channel notifying all of its subscribers — across different notification channels — whenever it uploads a new video.</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class Subscriber(ABC):
+    @abstractmethod
+    def update(self, video_title): pass
+
+class EmailSubscriber(Subscriber):
+    def __init__(self, email): self.email = email
+    def update(self, video_title):
+        print(f"Email to {self.email}: New video - {video_title}")
+
+class AppSubscriber(Subscriber):
+    def update(self, video_title):
+        print(f"App notification: New video - {video_title}")
+
+class Channel:                                # the "subject"
+    def __init__(self, name):
+        self.name = name
+        self._subscribers = []
+
+    def subscribe(self, sub: Subscriber):
+        self._subscribers.append(sub)
+
+    def unsubscribe(self, sub: Subscriber):
+        self._subscribers.remove(sub)
+
+    def upload_video(self, title):
+        print(f"{self.name} uploaded: {title}")
+        for sub in self._subscribers:          # notify everyone automatically
+            sub.update(title)
+
+channel = Channel("TechWithSandeep")
+channel.subscribe(EmailSubscriber("me@example.com"))
+channel.subscribe(AppSubscriber())
+channel.upload_video("Observer Pattern Explained")
+# Channel has zero knowledge of HOW each subscriber reacts.</code></pre>
+    </div>
+
+    <div class="callout interview">
+      <div class="callout-title">🎤 Interview one-liner</div>
+      <p>Observer is the pattern behind almost every "notify me when X happens" feature: stock price alerts, event listeners in a GUI, model-view updates. The key property is <strong>loose coupling</strong> — the subject only knows observers implement <code>update()</code>, never their concrete types.</p>
+    </div>
+
+    <h2 id="command"><span class="pattern-badge">3</span>Command</h2>
+    <p><strong>Intent:</strong> Encapsulate a request as a standalone object, so it can be passed around, queued, logged, or undone — decoupling the object that <em>invokes</em> an action from the object that actually <em>performs</em> it.</p>
+    <p><strong>Real-world LLD example:</strong> A universal remote control app where every button press needs to support undo.</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class Command(ABC):
+    @abstractmethod
+    def execute(self): pass
+    @abstractmethod
+    def undo(self): pass
+
+class Light:                                   # the "receiver" — does the real work
+    def turn_on(self): print("Light ON")
+    def turn_off(self): print("Light OFF")
+
+class LightOnCommand(Command):
+    def __init__(self, light: Light):
+        self.light = light
+    def execute(self):
+        self.light.turn_on()
+    def undo(self):
+        self.light.turn_off()
+
+class RemoteControl:                           # the "invoker" — knows nothing about Light
+    def __init__(self):
+        self.history = []
+
+    def press(self, command: Command):
+        command.execute()
+        self.history.append(command)
+
+    def press_undo(self):
+        if self.history:
+            self.history.pop().undo()
+
+light = Light()
+remote = RemoteControl()
+remote.press(LightOnCommand(light))    # Light ON
+remote.press_undo()                    # Light OFF -> undo works generically for ANY command</code></pre>
+    </div>
+
+    <div class="callout interview">
+      <div class="callout-title">🎤 Interview one-liner</div>
+      <p><code>RemoteControl</code> never imports or references <code>Light</code> directly — it only knows the <code>Command</code> interface. That decoupling is what lets the same remote drive a <code>Light</code>, a <code>Fan</code>, or a <code>Thermostat</code> without any changes, and is also what makes undo/redo stacks and macro-recording possible.</p>
+    </div>
+
+    <h2 id="state"><span class="pattern-badge">4</span>State</h2>
+    <p><strong>Intent:</strong> Let an object change its behavior when its internal state changes, so it appears to change its class — instead of one giant method full of <code>if/elif</code> checks on a status flag.</p>
+    <p><strong>Real-world LLD example:</strong> A vending machine that behaves completely differently depending on whether a coin has been inserted yet — a classic LLD interview question in its own right.</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class VendingState(ABC):
+    @abstractmethod
+    def insert_coin(self, machine): pass
+    @abstractmethod
+    def dispense(self, machine): pass
+
+class NoCoinState(VendingState):
+    def insert_coin(self, machine):
+        print("Coin accepted")
+        machine.state = machine.has_coin_state     # transition
+    def dispense(self, machine):
+        print("Insert a coin first!")
+
+class HasCoinState(VendingState):
+    def insert_coin(self, machine):
+        print("Coin already inserted, one is enough")
+    def dispense(self, machine):
+        print("Dispensing item...")
+        machine.state = machine.no_coin_state       # transition back
+
+class VendingMachine:
+    def __init__(self):
+        self.no_coin_state = NoCoinState()
+        self.has_coin_state = HasCoinState()
+        self.state = self.no_coin_state             # start state
+
+    def insert_coin(self): self.state.insert_coin(self)
+    def dispense(self): self.state.dispense(self)
+
+machine = VendingMachine()
+machine.dispense()        # Insert a coin first!
+machine.insert_coin()     # Coin accepted
+machine.dispense()        # Dispensing item...</code></pre>
+    </div>
+
+    <div class="callout pitfall">
+      <div class="callout-title">🚨 Strategy vs State — the classic mix-up</div>
+      <p>Structurally these two patterns look almost identical (a context object holding a swappable object behind a common interface). The difference is <strong>who decides to swap it</strong>: in <strong>Strategy</strong>, the client explicitly picks the algorithm from outside (<code>nav.set_strategy(...)</code>). In <strong>State</strong>, the state objects themselves trigger the transitions internally (<code>machine.state = machine.has_coin_state</code>) — the object's behavior evolves on its own as events happen.</p>
+    </div>
+
+    <h2 id="template-method"><span class="pattern-badge">5</span>Template Method</h2>
+    <p><strong>Intent:</strong> Define the overall skeleton of an algorithm in a base class method, deferring only specific steps to subclasses — the sequence of steps never changes, only what happens inside a few of them.</p>
+    <p><strong>Real-world LLD example:</strong> Making a hot beverage always follows the same 4 steps, but "brewing" and "condiments" differ between tea and coffee.</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class CaffeineBeverage(ABC):
+    def prepare(self):                # the template method -> fixed skeleton
+        self.boil_water()
+        self.brew()
+        self.pour_in_cup()
+        self.add_condiments()
+
+    def boil_water(self):             # shared step -> same for everyone
+        print("Boiling water")
+
+    def pour_in_cup(self):            # shared step -> same for everyone
+        print("Pouring into cup")
+
+    @abstractmethod
+    def brew(self): pass              # varies per subclass
+
+    @abstractmethod
+    def add_condiments(self): pass    # varies per subclass
+
+class Tea(CaffeineBeverage):
+    def brew(self): print("Steeping the tea")
+    def add_condiments(self): print("Adding lemon")
+
+class Coffee(CaffeineBeverage):
+    def brew(self): print("Dripping coffee through the filter")
+    def add_condiments(self): print("Adding sugar and milk")
+
+Tea().prepare()      # Boiling water / Steeping the tea / Pouring into cup / Adding lemon
+Coffee().prepare()   # same skeleton, different brew + condiments steps</code></pre>
+    </div>
+
+    <div class="callout interview">
+      <div class="callout-title">🎤 Template Method vs Strategy</div>
+      <p>Template Method uses <strong>inheritance</strong> — a subclass overrides specific steps of an algorithm whose overall shape is fixed by the parent. Strategy uses <strong>composition</strong> — the entire algorithm is swapped out as one interchangeable object, with no shared skeleton at all. Prefer Strategy when you need runtime flexibility; Template Method when the steps are naturally fixed and known at compile time.</p>
+    </div>
+
+    <h2 id="chain-of-responsibility"><span class="pattern-badge">6</span>Chain of Responsibility</h2>
+    <p><strong>Intent:</strong> Pass a request along a chain of potential handlers until one of them handles it — decoupling the sender of a request from the specific object that ends up processing it.</p>
+    <p><strong>Real-world LLD example:</strong> An expense approval system where a manager can approve small amounts, but larger amounts must escalate up the chain automatically.</p>
+
+    <div class="code-block">
+      <div class="code-label"><span>python</span><button class="copy-btn">Copy</button></div>
+      <pre><code class="language-python">from abc import ABC, abstractmethod
+
+class Approver(ABC):
+    def __init__(self, next_approver=None):
+        self.next_approver = next_approver
+
+    @abstractmethod
+    def can_approve(self, amount): pass
+
+    def process(self, amount):
+        if self.can_approve(amount):
+            print(f"{type(self).__name__} approved ${amount}")
+        elif self.next_approver:
+            self.next_approver.process(amount)      # pass it along the chain
+        else:
+            print("No one could approve this request")
+
+class Manager(Approver):
+    def can_approve(self, amount): return amount &lt;= 1000
+
+class Director(Approver):
+    def can_approve(self, amount): return amount &lt;= 10000
+
+class VP(Approver):
+    def can_approve(self, amount): return amount &lt;= 100000
+
+chain = Manager(Director(VP()))    # build the chain: Manager -> Director -> VP
+
+chain.process(500)      # Manager approved $500
+chain.process(5000)     # Director approved $5000
+chain.process(50000)    # VP approved $50000
+chain.process(500000)   # No one could approve this request</code></pre>
+    </div>
+
+    <div class="callout interview">
+      <div class="callout-title">🎤 Interview one-liner</div>
+      <p>The caller (<code>chain.process(amount)</code>) never needs to know or check which specific approver will end up handling the request — it just hands it to the front of the chain. This is the same underlying idea as middleware pipelines, event bubbling in the DOM, and support-ticket escalation (L1 → L2 → L3).</p>
+    </div>
+
+    <div class="revision-box">
+      <h3>📌 Quick Revision — Cheat Sheet</h3>
+      <ul>
+        <li><strong>Strategy</strong> — swap the whole algorithm, client decides. Composition-based.</li>
+        <li><strong>Observer</strong> — subject auto-notifies a list of registered observers on change.</li>
+        <li><strong>Command</strong> — wrap a request as an object; enables undo, queuing, logging, decoupled invokers.</li>
+        <li><strong>State</strong> — behavior changes automatically as the object's internal state transitions.</li>
+        <li><strong>Template Method</strong> — fixed algorithm skeleton in the base class; subclasses override specific steps. Inheritance-based.</li>
+        <li><strong>Chain of Responsibility</strong> — pass a request along a chain until a handler accepts it.</li>
+        <li><strong>Strategy vs State</strong>: who swaps the behavior — the client (Strategy) or the object itself (State)?</li>
+        <li><strong>Template Method vs Strategy</strong>: fixed skeleton + inheritance (Template Method) vs fully swappable + composition (Strategy).</li>
+      </ul>
+    </div>
+
+    <h2 id="interview-questions">Common Interview Questions</h2>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: How would you design a Vending Machine? Which pattern fits?</div>
+      <p>State is the textbook fit — model each machine mode (<code>NoCoin</code>, <code>HasCoin</code>, <code>Dispensing</code>, <code>SoldOut</code>) as its own class implementing a shared interface, and let each state decide both what happens and which state comes next. This avoids one giant method full of nested <code>if</code> checks on a status flag.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: Observer vs a Pub/Sub message broker — same thing?</div>
+      <p>Conceptually similar (notify interested parties on an event) but different in coupling and scope. Observer is typically in-process and direct — the subject holds direct references to its observers. Pub/Sub adds a broker/message queue between publishers and subscribers, so they don't know about each other at all, and it usually spans multiple processes or services.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: Why not just call the receiver's method directly instead of using Command?</div>
+      <p>Direct calls work fine until you need one of: queuing/deferring the action, logging what happened, supporting undo/redo, or letting the same invoker (e.g. a generic button/menu item) trigger completely different receivers interchangeably. Command earns its complexity specifically when one of those needs shows up — don't reach for it by default.</p>
+    </div>
+    <div class="callout interview">
+      <div class="callout-title">🎤 Q: In Chain of Responsibility, what happens if no handler can process the request?</div>
+      <p>You must explicitly decide: either the last handler has a fallback/default behavior (as in the example, printing a rejection), or the chain throws an exception. Silently dropping the request is a common design bug in real implementations — always design the "nobody handled this" case on purpose.</p>
+    </div>
+
+    <footer class="page-footer">Behavioral Design Patterns · LLD Revision Notes</footer>
+  </main>
+
+  <aside class="toc">
+    <div class="toc-title">On this page</div>
+    <ul id="toc-list"></ul>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>
